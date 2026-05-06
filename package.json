@@ -1,0 +1,130 @@
+{
+  "name": "latextoolbox",
+  "displayName": "LatexToolBox",
+  "description": "Convenient tools for writing LaTeX in VS Code.",
+  "version": "0.0.1",
+  "publisher": "shenyt",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:latex-toolbox.insertClipboardImage",
+    "onCommand:latex-toolbox.insertImageFromFile",
+    "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
+    "onLanguage:latex"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "latex-toolbox.insertClipboardImage",
+        "title": "LatexToolBox: Insert Clipboard Image"
+      },
+      {
+        "command": "latex-toolbox.insertImageFromFile",
+        "title": "LatexToolBox: Insert Image from File"
+      },
+      {
+        "command": "latex-toolbox.wrapSelectionWithWrapFigure",
+        "title": "LatexToolBox: Wrap Selection with Wrapfigure"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "latex-toolbox.insertClipboardImage",
+          "when": "editorLangId == latex",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.insertImageFromFile",
+          "when": "editorLangId == latex",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.wrapSelectionWithWrapFigure",
+          "when": "editorLangId == latex && editorHasSelection",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LatexToolBox",
+      "properties": {
+        "latexToolBox.clipboardImage.directory": {
+          "type": "string",
+          "default": "figures/paste",
+          "description": "Directory, relative to the active .tex file, where clipboard images are saved."
+        },
+        "latexToolBox.clipboardImage.template": {
+          "type": "string",
+          "default": "\\begin{figure}[htbp]\n  \\centering\n  \\includegraphics[width=${width}]{${path}}\n  \\caption{$1}\n  \\label{fig:${basename}}\n\\end{figure}",
+          "description": "Snippet template inserted after saving the clipboard image. Available placeholders: ${path}, ${filename}, ${basename}, ${width}."
+        },
+        "latexToolBox.clipboardImage.width": {
+          "type": "string",
+          "default": "0.8\\linewidth",
+          "description": "Default width value used by ${width} in the clipboard image template."
+        },
+        "latexToolBox.insertImage.template": {
+          "type": "string",
+          "default": "\\begin{figure}[htbp]\n  \\centering\n  \\includegraphics[width=${width}]{${path}}\n  \\caption{$1}\n  \\label{fig:${basename}}\n\\end{figure}",
+          "description": "Snippet template inserted after choosing an image file. Available placeholders: ${path}, ${filename}, ${basename}, ${width}."
+        },
+        "latexToolBox.insertImage.width": {
+          "type": "string",
+          "default": "0.8\\linewidth",
+          "description": "Default width value used by ${width} in the file image template."
+        },
+        "latexToolBox.wrapFigure.position": {
+          "type": "string",
+          "enum": [
+            "r",
+            "l",
+            "i",
+            "o",
+            "R",
+            "L",
+            "I",
+            "O"
+          ],
+          "default": "r",
+          "description": "Default wrapfigure placement. Common values are r for right and l for left."
+        },
+        "latexToolBox.wrapFigure.width": {
+          "type": "string",
+          "default": "0.45\\textwidth",
+          "description": "Default width argument used by the wrapfigure environment."
+        },
+        "latexToolBox.wrapFigure.includeGraphicsWidth": {
+          "type": "string",
+          "default": "\\linewidth",
+          "description": "Width value applied to \\includegraphics inside the wrapfigure environment."
+        },
+        "latexToolBox.wrapFigure.updateIncludeGraphicsWidth": {
+          "type": "boolean",
+          "default": true,
+          "description": "Replace or add the width option on \\includegraphics when converting a selection to wrapfigure."
+        },
+        "latexToolBox.wrapFigure.addPackage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically add \\usepackage{wrapfig} to the preamble when missing."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.3"
+  }
+}

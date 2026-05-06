@@ -1,0 +1,45 @@
+\documentclass{article}
+
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry}
+\usepackage{wrapfig}
+
+\title{LatexToolBox Test Document}
+\author{Test Author}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Clipboard Image Test}
+
+This is a small LaTeX document for testing LatexToolBox.
+
+Place the cursor below this paragraph, copy an image to the macOS clipboard,
+then run the VS Code command:
+
+
+\begin{quote}
+LatexToolBox: Insert Clipboard Image
+\end{quote}
+
+
+\begin{wrapfigure}{r}{0.45\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{figures/paste/pasted-20260506-173504.png}
+  \caption{}
+  \label{fig:pasted-20260506-173504}
+\end{wrapfigure}
+The extension should save the pasted image under \texttt{figures/paste/}
+and insert a LaTeX figure snippet at the cursor position.
+
+\section{Notes}
+
+You can change the extension settings to test a custom image directory,
+template, or default image width.
+
+
+
+\end{document}
