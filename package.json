@@ -19,6 +19,7 @@
     "onCommand:latex-toolbox.insertImageFromFile",
     "onCommand:latex-toolbox.insertTemplateFiles",
     "onCommand:latex-toolbox.insertTemplateBoxSnippet",
+    "onCommand:latex-toolbox.registerMathSymbolReplacement",
     "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
     "onLanguage:latex"
   ],
@@ -40,6 +41,10 @@
       {
         "command": "latex-toolbox.insertTemplateBoxSnippet",
         "title": "LatexToolBox: Insert Template Box Snippet"
+      },
+      {
+        "command": "latex-toolbox.registerMathSymbolReplacement",
+        "title": "LatexToolBox: Register Math Symbol Replacement"
       },
       {
         "command": "latex-toolbox.wrapSelectionWithWrapFigure",
@@ -66,6 +71,11 @@
         },
         {
           "command": "latex-toolbox.insertTemplateBoxSnippet",
+          "when": "editorLangId == latex",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.registerMathSymbolReplacement",
           "when": "editorLangId == latex",
           "group": "navigation"
         },
@@ -138,6 +148,33 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically add \\usepackage{wrapfig} to the preamble when missing."
+        },
+        "latexToolBox.mathSymbols.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically replace configured text triggers with LaTeX commands while typing inside math mode."
+        },
+        "latexToolBox.mathSymbols.replacements": {
+          "type": "object",
+          "default": {
+            "<=>": "\\Leftrightarrow",
+            "=>": "\\Rightarrow",
+            "<=": "\\leq",
+            ">=": "\\geq",
+            "!=": "\\neq",
+            "->": "\\to",
+            "<-": "\\leftarrow",
+            "|->": "\\mapsto",
+            "+-": "\\pm",
+            "-+": "\\mp",
+            "~=": "\\approx",
+            "===": "\\equiv",
+            "...": "\\ldots"
+          },
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Text replacements applied only inside LaTeX math mode. Keys are typed triggers and values are inserted LaTeX commands."
         }
       }
     }

@@ -62,6 +62,44 @@ You can insert them in two ways:
 - Run `LatexToolBox: Insert Template Box Snippet` and choose a box type.
 - Type one of the snippet prefixes in a LaTeX file and accept the VS Code completion item.
 
+### Math Symbol Auto Replacement
+
+LatexToolBox can automatically replace short typed symbols with LaTeX commands while the cursor is inside a math environment.
+
+Default replacements:
+
+```tex
+<=>  ->  \Leftrightarrow
+=>   ->  \Rightarrow
+<=   ->  \leq
+>=   ->  \geq
+!=   ->  \neq
+->   ->  \to
+<-   ->  \leftarrow
+|->  ->  \mapsto
++-   ->  \pm
+-+   ->  \mp
+~=   ->  \approx
+===  ->  \equiv
+...  ->  \ldots
+```
+
+Examples:
+
+```tex
+$ A => B $
+```
+
+becomes:
+
+```tex
+$ A \Rightarrow B $
+```
+
+The replacement only runs in LaTeX math mode, including `$...$`, `\(...\)`, `\[...\]`, and common math environments such as `equation`, `align`, `gather`, `multline`, `matrix`, and `cases`.
+
+To add your own symbol, run `LatexToolBox: Register Math Symbol Replacement` and enter the typed trigger plus the LaTeX replacement. You can save it in the current workspace or in user settings.
+
 ## Requirements
 
 - VS Code `^1.90.0`
@@ -111,6 +149,37 @@ The file-picker image insertion and wrapfigure transformation are not macOS-spec
   - Default: `true`
   - Automatically add `\usepackage{wrapfig}` to the preamble when missing.
 
+### Math Symbols
+
+- `latexToolBox.mathSymbols.enabled`
+  - Default: `true`
+  - Enable automatic math-mode symbol replacement.
+- `latexToolBox.mathSymbols.replacements`
+  - Default: common symbolic triggers such as `=>`, `<=>`, `<=`, `>=`, `!=`, `->`, `<-`, `|->`, `+-`, `-+`, `~=`, `===`, and `...`.
+  - Mapping from typed triggers to LaTeX replacements.
+
+Example:
+
+```json
+{
+  "latexToolBox.mathSymbols.replacements": {
+    "<=>": "\\Leftrightarrow",
+    "=>": "\\Rightarrow",
+    "<=": "\\leq",
+    ">=": "\\geq",
+    "!=": "\\neq",
+    "->": "\\to",
+    "<-": "\\leftarrow",
+    "|->": "\\mapsto",
+    "+-": "\\pm",
+    "-+": "\\mp",
+    "~=": "\\approx",
+    "===": "\\equiv",
+    "...": "\\ldots"
+  }
+}
+```
+
 ## Template Placeholders
 
 Image insertion templates support these placeholders:
@@ -155,6 +224,7 @@ Useful files:
 - `src/extension.ts`: command registration and VS Code integration.
 - `src/clipboardImage.ts`: macOS clipboard image extraction.
 - `src/latexTemplate.ts`: bundled template copying and template box snippet commands.
+- `src/mathSymbols.ts`: math-mode detection and typed symbol replacement.
 - `src/wrapFigure.ts`: LaTeX wrapfigure transformation logic.
 - `latextemplate/main.tex`: bundled LaTeX notes template.
 - `latextemplate/notes-style.tex`: bundled template style file.

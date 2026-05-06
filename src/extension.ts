@@ -9,6 +9,12 @@ import {
   resolveProjectDirectory,
   selectTemplateBoxSnippet
 } from "./latexTemplate";
+import {
+  findMathSymbolReplacement,
+  isInLatexMath,
+  normalizeMathSymbolReplacements,
+  type MathSymbolReplacements
+} from "./mathSymbols";
 import { renderLatexTemplate } from "./template";
 import {
   transformSelectionToWrapFigure,
@@ -23,6 +29,13 @@ interface ImageSnippetConfiguration {
 interface ClipboardImageConfiguration extends ImageSnippetConfiguration {
   directory: string;
 }
+
+interface MathSymbolConfiguration {
+  enabled: boolean;
+  replacements: MathSymbolReplacements;
+}
+
+let applyingMathSymbolReplacement = false;
 
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
@@ -43,9 +56,16 @@ export function activate(context: vscode.ExtensionContext): void {
       insertTemplateBoxSnippet
     ),
     vscode.commands.registerCommand(
+      "latex-toolbox.registerMathSymbolReplacement",
+      registerMathSymbolReplacement
+    ),
+    vscode.commands.registerCommand(
       "latex-toolbox.wrapSelectionWithWrapFigure",
       wrapSelectionWithWrapFigure
-    )
+    ),
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      void handleMathSymbolReplacement(event);
+    })
   );
 }
 
@@ -240,6 +260,60 @@ async function insertTemplateBoxSnippet(): Promise<void> {
   await editor.insertSnippet(snippet.snippet);
 }
 
+async function registerMathSymbolReplacement(): Promise<void> {
+  const trigger = await vscode.window.showInputBox({
+    ignoreFocusOut: true,
+    placeHolder: "=>",
+    prompt: "Text to replace while typing inside LaTeX math mode",
+    validateInput: (value) => value.length > 0 ? undefined : "Trigger text cannot be empty."
+  });
+
+  if (!trigger) {
+    return;
+  }
+
+  const replacement = await vscode.window.showInputBox({
+    ignoreFocusOut: true,
+    placeHolder: "\\Rightarrow",
+    prompt: `LaTeX replacement for ${trigger}`,
+    validateInput: (value) => value.length > 0 ? undefined : "Replacement text cannot be empty."
+  });
+
+  if (!replacement) {
+    return;
+  }
+
+  const targets = [
+    ...(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
+      ? [{
+        label: "Workspace",
+        target: vscode.ConfigurationTarget.Workspace
+      }]
+      : []),
+    {
+      label: "User",
+      target: vscode.ConfigurationTarget.Global
+    }
+  ];
+  const selectedTarget = await vscode.window.showQuickPick(targets, {
+    placeHolder: "Where should this math symbol replacement be registered?"
+  });
+
+  if (!selectedTarget) {
+    return;
+  }
+
+  const configuration = vscode.workspace.getConfiguration("latexToolBox.mathSymbols");
+  const current = normalizeMathSymbolReplacements(configuration.get("replacements", defaultMathSymbolReplacements()));
+  const next = {
+    ...current,
+    [trigger]: replacement
+  };
+
+  await configuration.update("replacements", next, selectedTarget.target);
+  vscode.window.showInformationMessage(`LatexToolBox: registered ${trigger} -> ${replacement}.`);
+}
+
 async function wrapSelectionWithWrapFigure(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
 
@@ -293,6 +367,69 @@ async function wrapSelectionWithWrapFigure(): Promise<void> {
   });
 }
 
+async function handleMathSymbolReplacement(event: vscode.TextDocumentChangeEvent): Promise<void> {
+  if (applyingMathSymbolReplacement || event.contentChanges.length !== 1 || !isLatexDocument(event.document)) {
+    return;
+  }
+
+  const configuration = getMathSymbolConfiguration();
+
+  if (!configuration.enabled || Object.keys(configuration.replacements).length === 0) {
+    return;
+  }
+
+  const change = event.contentChanges[0];
+
+  if (change.text.length === 0 || change.text.includes("\n") || change.text.includes("\r")) {
+    return;
+  }
+
+  const insertedTextEnd = new vscode.Position(
+    change.range.start.line,
+    change.range.start.character + change.text.length
+  );
+  const linePrefix = event.document.lineAt(insertedTextEnd.line).text.slice(0, insertedTextEnd.character);
+  const match = findMathSymbolReplacement(linePrefix, configuration.replacements);
+
+  if (!match) {
+    return;
+  }
+
+  const triggerStart = new vscode.Position(insertedTextEnd.line, match.startCharacter);
+  const textBeforeTrigger = event.document.getText(new vscode.Range(
+    new vscode.Position(0, 0),
+    triggerStart
+  ));
+
+  if (!isInLatexMath(textBeforeTrigger)) {
+    return;
+  }
+
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor || editor.document.uri.toString() !== event.document.uri.toString()) {
+    return;
+  }
+
+  const replacementRange = new vscode.Range(triggerStart, insertedTextEnd);
+
+  applyingMathSymbolReplacement = true;
+
+  try {
+    await editor.edit((editBuilder) => {
+      editBuilder.replace(replacementRange, match.replacement);
+    }, {
+      undoStopAfter: false,
+      undoStopBefore: false
+    });
+
+    const replacementEnd = triggerStart.translate(0, match.replacement.length);
+    editor.selection = new vscode.Selection(replacementEnd, replacementEnd);
+  } finally {
+    applyingMathSymbolReplacement = false;
+  }
+}
+
 function isLatexDocument(document: vscode.TextDocument): boolean {
   return document.languageId === "latex" || document.fileName.toLowerCase().endsWith(".tex");
 }
@@ -325,6 +462,35 @@ function getWrapFigureConfiguration(): WrapFigureConfiguration {
     position: normalizeWrapFigurePosition(configuration.get("position", "r")),
     updateIncludeGraphicsWidth: configuration.get("updateIncludeGraphicsWidth", true),
     width: configuration.get("width", "0.45\\textwidth")
+  };
+}
+
+function getMathSymbolConfiguration(): MathSymbolConfiguration {
+  const configuration = vscode.workspace.getConfiguration("latexToolBox.mathSymbols");
+
+  return {
+    enabled: configuration.get("enabled", true),
+    replacements: normalizeMathSymbolReplacements(
+      configuration.get("replacements", defaultMathSymbolReplacements())
+    )
+  };
+}
+
+function defaultMathSymbolReplacements(): MathSymbolReplacements {
+  return {
+    "<=>": "\\Leftrightarrow",
+    "=>": "\\Rightarrow",
+    "<=": "\\leq",
+    ">=": "\\geq",
+    "!=": "\\neq",
+    "->": "\\to",
+    "<-": "\\leftarrow",
+    "|->": "\\mapsto",
+    "+-": "\\pm",
+    "-+": "\\mp",
+    "~=": "\\approx",
+    "===": "\\equiv",
+    "...": "\\ldots"
   };
 }
 
