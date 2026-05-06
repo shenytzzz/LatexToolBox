@@ -4,6 +4,10 @@
   "description": "Convenient tools for writing LaTeX in VS Code.",
   "version": "0.0.1",
   "publisher": "shenyt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shenytzzz/LatexToolBox.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -13,6 +17,8 @@
   "activationEvents": [
     "onCommand:latex-toolbox.insertClipboardImage",
     "onCommand:latex-toolbox.insertImageFromFile",
+    "onCommand:latex-toolbox.insertTemplateFiles",
+    "onCommand:latex-toolbox.insertTemplateBoxSnippet",
     "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
     "onLanguage:latex"
   ],
@@ -28,8 +34,22 @@
         "title": "LatexToolBox: Insert Image from File"
       },
       {
+        "command": "latex-toolbox.insertTemplateFiles",
+        "title": "LatexToolBox: Insert LaTeX Template Files"
+      },
+      {
+        "command": "latex-toolbox.insertTemplateBoxSnippet",
+        "title": "LatexToolBox: Insert Template Box Snippet"
+      },
+      {
         "command": "latex-toolbox.wrapSelectionWithWrapFigure",
         "title": "LatexToolBox: Wrap Selection with Wrapfigure"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "latex",
+        "path": "./snippets/latex.json"
       }
     ],
     "menus": {
@@ -41,6 +61,11 @@
         },
         {
           "command": "latex-toolbox.insertImageFromFile",
+          "when": "editorLangId == latex",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.insertTemplateBoxSnippet",
           "when": "editorLangId == latex",
           "group": "navigation"
         },

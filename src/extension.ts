@@ -3,6 +3,12 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { readClipboardImageAsPng } from "./clipboardImage";
 import { makeTimestampedPngName, toLatexRelativePath } from "./fileNames";
+import {
+  copyLatexTemplateFiles,
+  listTemplateFileNames,
+  resolveProjectDirectory,
+  selectTemplateBoxSnippet
+} from "./latexTemplate";
 import { renderLatexTemplate } from "./template";
 import {
   transformSelectionToWrapFigure,
@@ -27,6 +33,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "latex-toolbox.insertImageFromFile",
       insertImageFromFile
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.insertTemplateFiles",
+      () => insertTemplateFiles(context)
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.insertTemplateBoxSnippet",
+      insertTemplateBoxSnippet
     ),
     vscode.commands.registerCommand(
       "latex-toolbox.wrapSelectionWithWrapFigure",
@@ -151,6 +165,79 @@ async function insertImageFromFile(): Promise<void> {
   const snippet = buildSnippet(configuration, texDirectory, imageUri.fsPath);
 
   await editor.insertSnippet(new vscode.SnippetString(snippet));
+}
+
+async function insertTemplateFiles(context: vscode.ExtensionContext): Promise<void> {
+  const targetDirectory = await resolveProjectDirectory();
+
+  if (!targetDirectory) {
+    vscode.window.showErrorMessage("LatexToolBox: open a project folder or saved file before inserting the LaTeX template.");
+    return;
+  }
+
+  const existingFiles = await findExistingTemplateFiles(targetDirectory);
+  let overwrite = false;
+
+  if (existingFiles.length > 0) {
+    const choice = await vscode.window.showWarningMessage(
+      `LatexToolBox: ${existingFiles.join(", ")} already exist in ${targetDirectory.fsPath}.`,
+      { modal: true },
+      "Overwrite",
+      "Skip Existing"
+    );
+
+    if (!choice) {
+      return;
+    }
+
+    overwrite = choice === "Overwrite";
+  }
+
+  try {
+    const result = await copyLatexTemplateFiles(context.extensionUri, targetDirectory, overwrite);
+    const copied = result.copied.length > 0
+      ? `copied ${result.copied.join(", ")}`
+      : "copied no files";
+    const skipped = result.skipped.length > 0
+      ? `; skipped ${result.skipped.join(", ")}`
+      : "";
+
+    vscode.window.showInformationMessage(`LatexToolBox: ${copied}${skipped} to ${result.targetDirectory}.`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    vscode.window.showErrorMessage(`LatexToolBox: failed to insert template files. ${message}`);
+  }
+}
+
+async function insertTemplateBoxSnippet(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showErrorMessage("LatexToolBox: open a LaTeX file before inserting a template snippet.");
+    return;
+  }
+
+  const document = editor.document;
+
+  if (!isLatexDocument(document)) {
+    const choice = await vscode.window.showWarningMessage(
+      "LatexToolBox: the active document is not recognized as LaTeX. Insert the snippet anyway?",
+      { modal: true },
+      "Insert Anyway"
+    );
+
+    if (choice !== "Insert Anyway") {
+      return;
+    }
+  }
+
+  const snippet = await selectTemplateBoxSnippet();
+
+  if (!snippet) {
+    return;
+  }
+
+  await editor.insertSnippet(snippet.snippet);
 }
 
 async function wrapSelectionWithWrapFigure(): Promise<void> {
@@ -286,6 +373,25 @@ function getWrapfigPackageInsertion(document: vscode.TextDocument): { position: 
     position: document.positionAt(beginDocumentMatch.index),
     text: "\\usepackage{wrapfig}\n\n"
   };
+}
+
+async function findExistingTemplateFiles(targetDirectory: vscode.Uri): Promise<string[]> {
+  const existingFiles: string[] = [];
+
+  for (const fileName of listTemplateFileNames()) {
+    const uri = vscode.Uri.joinPath(targetDirectory, fileName);
+
+    try {
+      await vscode.workspace.fs.stat(uri);
+      existingFiles.push(fileName);
+    } catch (error) {
+      if (!(error instanceof vscode.FileSystemError && error.code === "FileNotFound")) {
+        throw error;
+      }
+    }
+  }
+
+  return existingFiles;
 }
 
 function normalizeRelativeDirectory(directory: string): string {

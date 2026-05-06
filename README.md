@@ -37,6 +37,31 @@ The command converts a selected `figure` environment into `wrapfigure`. If the s
 
 It can also insert `\usepackage{wrapfig}` into the preamble when the package is missing.
 
+### Insert LaTeX Template Files
+
+Run `LatexToolBox: Insert LaTeX Template Files` to copy the bundled notes template into the current VS Code project.
+
+The command copies:
+
+- `latextemplate/main.tex` -> `<project>/main.tex`
+- `latextemplate/notes-style.tex` -> `<project>/notes-style.tex`
+
+If the active file belongs to a workspace folder, that workspace folder is used as the project directory. In a multi-root workspace without an active file match, LatexToolBox asks which folder to use. Existing files are not overwritten unless you explicitly choose `Overwrite`.
+
+### Insert Template Box Snippets
+
+LatexToolBox includes snippets for the box environments defined by the bundled template:
+
+- `definition` / `definitionbox`
+- `principle` / `principlebox`
+- `example` / `examplebox`
+- `note` / `notebox`
+
+You can insert them in two ways:
+
+- Run `LatexToolBox: Insert Template Box Snippet` and choose a box type.
+- Type one of the snippet prefixes in a LaTeX file and accept the VS Code completion item.
+
 ## Requirements
 
 - VS Code `^1.90.0`
@@ -129,7 +154,11 @@ Useful files:
 
 - `src/extension.ts`: command registration and VS Code integration.
 - `src/clipboardImage.ts`: macOS clipboard image extraction.
+- `src/latexTemplate.ts`: bundled template copying and template box snippet commands.
 - `src/wrapFigure.ts`: LaTeX wrapfigure transformation logic.
+- `latextemplate/main.tex`: bundled LaTeX notes template.
+- `latextemplate/notes-style.tex`: bundled template style file.
+- `snippets/latex.json`: LaTeX snippet contributions.
 - `test.tex`: small document for manual testing.
 
 ## Current Limitations

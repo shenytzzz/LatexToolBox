@@ -1,0 +1,50 @@
+{
+  "LatexToolBox Definition Box": {
+    "prefix": [
+      "definition",
+      "definitionbox"
+    ],
+    "body": [
+      "\\begin{definitionbox}{${1:Title}}",
+      "${0:Definition content.}",
+      "\\end{definitionbox}"
+    ],
+    "description": "Insert a LatexToolBox definitionbox environment."
+  },
+  "LatexToolBox Principle Box": {
+    "prefix": [
+      "principle",
+      "principlebox"
+    ],
+    "body": [
+      "\\begin{principlebox}{${1:Title}}",
+      "${0:Principle content.}",
+      "\\end{principlebox}"
+    ],
+    "description": "Insert a LatexToolBox principlebox environment."
+  },
+  "LatexToolBox Example Box": {
+    "prefix": [
+      "example",
+      "examplebox"
+    ],
+    "body": [
+      "\\begin{examplebox}{${1:Title}}",
+      "${0:Example content.}",
+      "\\end{examplebox}"
+    ],
+    "description": "Insert a LatexToolBox examplebox environment."
+  },
+  "LatexToolBox Note Box": {
+    "prefix": [
+      "note",
+      "notebox"
+    ],
+    "body": [
+      "\\begin{notebox}{${1:Title}}",
+      "${0:Note content.}",
+      "\\end{notebox}"
+    ],
+    "description": "Insert a LatexToolBox notebox environment."
+  }
+}

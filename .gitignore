@@ -20,3 +20,5 @@ node_modules/
 
 # Manual test output
 figures/paste/
+latextemplate/*.pdf
+latextemplate/*.synctex.gz

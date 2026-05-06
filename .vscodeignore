@@ -6,3 +6,10 @@ node_modules/**
 tsconfig.json
 *.vsix
 *.map
+**/*.map
+test.tex
+test.pdf
+test.synctex.gz
+figures/**
+latextemplate/*.pdf
+latextemplate/*.synctex.gz
