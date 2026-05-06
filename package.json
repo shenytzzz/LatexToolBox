@@ -15,17 +15,28 @@
     "Other"
   ],
   "activationEvents": [
+    "onCommand:latex-toolbox.boldSelection",
     "onCommand:latex-toolbox.insertClipboardImage",
     "onCommand:latex-toolbox.insertImageFromFile",
     "onCommand:latex-toolbox.insertTemplateFiles",
     "onCommand:latex-toolbox.insertTemplateBoxSnippet",
+    "onCommand:latex-toolbox.italicSelection",
     "onCommand:latex-toolbox.registerMathSymbolReplacement",
+    "onCommand:latex-toolbox.underlineSelection",
     "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
     "onLanguage:latex"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "latex-toolbox.boldSelection",
+        "title": "LatexToolBox: Bold Selection"
+      },
+      {
+        "command": "latex-toolbox.italicSelection",
+        "title": "LatexToolBox: Italic Selection"
+      },
       {
         "command": "latex-toolbox.insertClipboardImage",
         "title": "LatexToolBox: Insert Clipboard Image"
@@ -47,8 +58,32 @@
         "title": "LatexToolBox: Register Math Symbol Replacement"
       },
       {
+        "command": "latex-toolbox.underlineSelection",
+        "title": "LatexToolBox: Underline Selection"
+      },
+      {
         "command": "latex-toolbox.wrapSelectionWithWrapFigure",
         "title": "LatexToolBox: Wrap Selection with Wrapfigure"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "latex-toolbox.boldSelection",
+        "key": "ctrl+b",
+        "mac": "cmd+b",
+        "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
+      },
+      {
+        "command": "latex-toolbox.italicSelection",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
+      },
+      {
+        "command": "latex-toolbox.underlineSelection",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
+        "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
       }
     ],
     "snippets": [
@@ -59,6 +94,21 @@
     ],
     "menus": {
       "editor/context": [
+        {
+          "command": "latex-toolbox.boldSelection",
+          "when": "editorLangId == latex && editorHasSelection",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.italicSelection",
+          "when": "editorLangId == latex && editorHasSelection",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.underlineSelection",
+          "when": "editorLangId == latex && editorHasSelection",
+          "group": "navigation"
+        },
         {
           "command": "latex-toolbox.insertClipboardImage",
           "when": "editorLangId == latex",

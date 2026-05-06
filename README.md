@@ -4,6 +4,18 @@ LatexToolBox is a VS Code extension that adds practical shortcuts for writing La
 
 ## Features
 
+### Format Selected Text
+
+When editing a LaTeX file, LatexToolBox overrides the default VS Code formatting shortcuts:
+
+- `Cmd+B` wraps the selected text with `\textbf{...}`
+- `Cmd+I` wraps the selected text with `\textit{...}`
+- `Cmd+U` wraps the selected text with `\underline{...}`
+
+On Windows and Linux, the contributed shortcuts are `Ctrl+B`, `Ctrl+I`, and `Ctrl+U`.
+
+The commands support multiple selections. After wrapping, LatexToolBox keeps the original text selected inside the braces so you can immediately apply another style.
+
 ### Insert Clipboard Image
 
 Run `LatexToolBox: Insert Clipboard Image` in a saved `.tex` file on macOS.

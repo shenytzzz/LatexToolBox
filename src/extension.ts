@@ -40,6 +40,18 @@ let applyingMathSymbolReplacement = false;
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand(
+      "latex-toolbox.boldSelection",
+      () => formatSelectionWithLatexCommand("textbf", "bold")
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.italicSelection",
+      () => formatSelectionWithLatexCommand("textit", "italic")
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.underlineSelection",
+      () => formatSelectionWithLatexCommand("underline", "underline")
+    ),
+    vscode.commands.registerCommand(
       "latex-toolbox.insertClipboardImage",
       insertClipboardImage
     ),
@@ -114,6 +126,52 @@ async function insertClipboardImage(): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`LatexToolBox: ${message}`);
   }
+}
+
+async function formatSelectionWithLatexCommand(commandName: string, formatName: string): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showErrorMessage(`LatexToolBox: open a LaTeX file before applying ${formatName}.`);
+    return;
+  }
+
+  const document = editor.document;
+
+  if (!isLatexDocument(document)) {
+    const choice = await vscode.window.showWarningMessage(
+      `LatexToolBox: the active document is not recognized as LaTeX. Apply ${formatName} anyway?`,
+      { modal: true },
+      "Apply Anyway"
+    );
+
+    if (choice !== "Apply Anyway") {
+      return;
+    }
+  }
+
+  const selections = editor.selections.filter((selection) => !selection.isEmpty);
+
+  if (selections.length === 0) {
+    vscode.window.showErrorMessage(`LatexToolBox: select text before applying ${formatName}.`);
+    return;
+  }
+
+  const sortedSelections = [...selections].sort((left, right) => document.offsetAt(right.start) - document.offsetAt(left.start));
+  const nextSelections = new Map<string, vscode.Selection>();
+
+  await editor.edit((editBuilder) => {
+    for (const selection of sortedSelections) {
+      const selectedText = document.getText(selection);
+
+      editBuilder.replace(selection, `\\${commandName}{${selectedText}}`);
+      nextSelections.set(selectionKey(selection), makeInnerSelection(selection, commandName, selectedText));
+    }
+  });
+
+  editor.selections = selections
+    .map((selection) => nextSelections.get(selectionKey(selection)))
+    .filter((selection): selection is vscode.Selection => selection !== undefined);
 }
 
 async function insertImageFromFile(): Promise<void> {
@@ -625,6 +683,42 @@ async function isAvailable(filePath: string): Promise<boolean> {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+function selectionKey(selection: vscode.Selection): string {
+  return [
+    selection.start.line,
+    selection.start.character,
+    selection.end.line,
+    selection.end.character
+  ].join(":");
+}
+
+function makeInnerSelection(
+  selection: vscode.Selection,
+  commandName: string,
+  selectedText: string
+): vscode.Selection {
+  const openWrapperLength = commandName.length + 2;
+  const selectionStartOffset = openWrapperLength;
+  const selectionEndOffset = openWrapperLength + selectedText.length;
+  const start = translateByTextOffset(selection.start, `\\${commandName}{`.slice(0, selectionStartOffset));
+  const end = translateByTextOffset(selection.start, `\\${commandName}{${selectedText}`.slice(0, selectionEndOffset));
+
+  return new vscode.Selection(start, end);
+}
+
+function translateByTextOffset(position: vscode.Position, text: string): vscode.Position {
+  const lines = text.split(/\r?\n/);
+
+  if (lines.length === 1) {
+    return position.translate(0, text.length);
+  }
+
+  return new vscode.Position(
+    position.line + lines.length - 1,
+    lines[lines.length - 1].length
+  );
 }
 
 function buildSnippet(
