@@ -2,7 +2,7 @@
   "name": "latextoolbox",
   "displayName": "LatexToolBox",
   "description": "Convenient tools for writing LaTeX in VS Code.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "shenyt",
   "repository": {
     "type": "git",
@@ -21,8 +21,11 @@
     "onCommand:latex-toolbox.insertTemplateFiles",
     "onCommand:latex-toolbox.insertTemplateBoxSnippet",
     "onCommand:latex-toolbox.italicSelection",
+    "onCommand:latex-toolbox.mergeSelectionIntoSubfigures",
     "onCommand:latex-toolbox.registerMathSymbolReplacement",
     "onCommand:latex-toolbox.underlineSelection",
+    "onCommand:latex-toolbox.unmergeSelectionFromSubfigures",
+    "onCommand:latex-toolbox.unwrapSelectionFromWrapFigure",
     "onCommand:latex-toolbox.updateTemplateStyleFile",
     "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
     "onLanguage:latex"
@@ -57,6 +60,18 @@
       {
         "command": "latex-toolbox.updateTemplateStyleFile",
         "title": "LatexToolBox: Update LaTeX Template Style File"
+      },
+      {
+        "command": "latex-toolbox.mergeSelectionIntoSubfigures",
+        "title": "LatexToolBox: Merge Selected Figures into Subfigures"
+      },
+      {
+        "command": "latex-toolbox.unmergeSelectionFromSubfigures",
+        "title": "LatexToolBox: Unmerge Subfigures into Figures"
+      },
+      {
+        "command": "latex-toolbox.unwrapSelectionFromWrapFigure",
+        "title": "LatexToolBox: Unwrap Wrapfigure"
       },
       {
         "command": "latex-toolbox.registerMathSymbolReplacement",
@@ -145,6 +160,21 @@
         {
           "command": "latex-toolbox.insertTemplateBoxSnippet",
           "when": "editorLangId == latex",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.mergeSelectionIntoSubfigures",
+          "when": "editorLangId == latex && editorHasSelection",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.unmergeSelectionFromSubfigures",
+          "when": "editorLangId == latex && editorHasSelection",
+          "group": "navigation"
+        },
+        {
+          "command": "latex-toolbox.unwrapSelectionFromWrapFigure",
+          "when": "editorLangId == latex && editorHasSelection",
           "group": "navigation"
         },
         {

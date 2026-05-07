@@ -1,0 +1,33 @@
+% !TEX root = ../main.tex
+
+\chapter{First-Order Equations}
+
+\section{Characteristic Curves}
+
+Consider
+\[
+  a(x,y)u_x+b(x,y)u_y=c(x,y,u).
+\]
+The characteristic system
+\[
+  \frac{\dd x}{\dd s}=a(x,y),\qquad
+  \frac{\dd y}{\dd s}=b(x,y),\qquad
+  \frac{\dd u}{\dd s}=c(x,y,u)
+\]
+turns the PDE into a system of ordinary differential equations along curves.
+
+\section{Transport Equation}
+
+The constant-coefficient transport equation
+\[
+  u_t+v\cdot\nabla u=0
+\]
+has solutions that are constant along straight characteristics \(x(t)=x_0+vt\). Thus \(u(t,x)=u_0(x-vt)\).
+
+\section{Conservation Laws}
+
+Nonlinear conservation laws such as
+\[
+  u_t+f(u)_x=0
+\]
+may develop shocks even from smooth initial data. Weak solutions and entropy conditions are introduced to recover uniqueness.

@@ -1,0 +1,23 @@
+% !TEX root = ../main.tex
+
+\chapter{Wave Equation}
+
+\section{One-Dimensional Formula}
+
+The one-dimensional wave equation \(u_{tt}-c^2u_{xx}=0\) admits d'Alembert's representation
+\[
+  u(t,x)=\frac{1}{2}\bigl(u_0(x-ct)+u_0(x+ct)\bigr)
+  +\frac{1}{2c}\int_{x-ct}^{x+ct} v_0(s)\dd s.
+\]
+
+\section{Energy Method}
+
+For smooth solutions on a domain without boundary flux, the energy
+\[
+  E(t)=\frac{1}{2}\int_\Omega \left(|u_t|^2+c^2|\nabla u|^2\right)\dd x
+\]
+is conserved. This identity is the basic uniqueness mechanism for the wave equation.
+
+\section{Higher Dimensions}
+
+In three dimensions, waves propagate on spheres. In two dimensions, the solution depends on data inside the light cone, which creates a different decay pattern.

@@ -19,6 +19,12 @@ import {
 } from "./mathSymbols";
 import { renderLatexTemplate } from "./template";
 import {
+  transformSelectionFromSubfigures,
+  transformSelectionToSubfigures,
+  type SubfigureTransformResult
+} from "./subfigures";
+import {
+  transformSelectionFromWrapFigure,
   transformSelectionToWrapFigure,
   type WrapFigureConfiguration
 } from "./wrapFigure";
@@ -71,6 +77,14 @@ export function activate(context: vscode.ExtensionContext): void {
       insertImageFromFile
     ),
     vscode.commands.registerCommand(
+      "latex-toolbox.mergeSelectionIntoSubfigures",
+      mergeSelectionIntoSubfigures
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.unmergeSelectionFromSubfigures",
+      unmergeSelectionFromSubfigures
+    ),
+    vscode.commands.registerCommand(
       "latex-toolbox.insertTemplateFiles",
       () => insertTemplateFiles(context)
     ),
@@ -89,6 +103,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "latex-toolbox.wrapSelectionWithWrapFigure",
       wrapSelectionWithWrapFigure
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.unwrapSelectionFromWrapFigure",
+      unwrapSelectionFromWrapFigure
     ),
     vscode.workspace.onDidChangeTextDocument((event) => {
       void handleMathSymbolReplacement(event);
@@ -272,11 +290,109 @@ async function insertImageFromFile(): Promise<void> {
   await editor.insertSnippet(new vscode.SnippetString(snippet));
 }
 
+async function mergeSelectionIntoSubfigures(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showErrorMessage("LatexToolBox: open a LaTeX file before merging figures into subfigures.");
+    return;
+  }
+
+  const document = editor.document;
+
+  if (!isLatexDocument(document)) {
+    const choice = await vscode.window.showWarningMessage(
+      "LatexToolBox: the active document is not recognized as LaTeX. Merge the selected figures anyway?",
+      { modal: true },
+      "Merge Anyway"
+    );
+
+    if (choice !== "Merge Anyway") {
+      return;
+    }
+  }
+
+  const selection = editor.selection;
+
+  if (selection.isEmpty) {
+    vscode.window.showErrorMessage("LatexToolBox: select two or more figure environments before merging them into subfigures.");
+    return;
+  }
+
+  const result: SubfigureTransformResult = transformSelectionToSubfigures(document.getText(selection));
+
+  if (!result.text) {
+    vscode.window.showErrorMessage(`LatexToolBox: ${result.error ?? "could not merge the selected figures into subfigures."}`);
+    return;
+  }
+
+  const transformedText = result.text;
+
+  await editor.edit((editBuilder) => {
+    const insertion = getPackageInsertion(document, "subcaption");
+
+    if (insertion) {
+      editBuilder.insert(insertion.position, insertion.text);
+    }
+
+    editBuilder.replace(selection, transformedText);
+  });
+}
+
+async function unmergeSelectionFromSubfigures(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showErrorMessage("LatexToolBox: open a LaTeX file before unmerging subfigures.");
+    return;
+  }
+
+  const document = editor.document;
+
+  if (!isLatexDocument(document)) {
+    const choice = await vscode.window.showWarningMessage(
+      "LatexToolBox: the active document is not recognized as LaTeX. Unmerge the selected subfigures anyway?",
+      { modal: true },
+      "Unmerge Anyway"
+    );
+
+    if (choice !== "Unmerge Anyway") {
+      return;
+    }
+  }
+
+  const selection = editor.selection;
+
+  if (selection.isEmpty) {
+    vscode.window.showErrorMessage("LatexToolBox: select one figure environment containing subfigures before unmerging it.");
+    return;
+  }
+
+  const result: SubfigureTransformResult = transformSelectionFromSubfigures(document.getText(selection));
+
+  if (!result.text) {
+    vscode.window.showErrorMessage(`LatexToolBox: ${result.error ?? "could not unmerge the selected subfigures."}`);
+    return;
+  }
+
+  const transformedText = result.text;
+
+  await editor.edit((editBuilder) => {
+    editBuilder.replace(selection, transformedText);
+  });
+}
+
 async function insertTemplateFiles(context: vscode.ExtensionContext): Promise<void> {
-  const targetDirectory = await resolveProjectDirectory();
+  const baseDirectory = await resolveProjectDirectory();
+
+  if (!baseDirectory) {
+    vscode.window.showErrorMessage("LatexToolBox: open a project folder or saved file before inserting the LaTeX template.");
+    return;
+  }
+
+  const targetDirectory = await selectTemplateTargetDirectory(baseDirectory);
 
   if (!targetDirectory) {
-    vscode.window.showErrorMessage("LatexToolBox: open a project folder or saved file before inserting the LaTeX template.");
     return;
   }
 
@@ -312,6 +428,75 @@ async function insertTemplateFiles(context: vscode.ExtensionContext): Promise<vo
     const message = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`LatexToolBox: failed to insert template files. ${message}`);
   }
+}
+
+async function selectTemplateTargetDirectory(baseDirectory: vscode.Uri): Promise<vscode.Uri | undefined> {
+  const selected = await vscode.window.showQuickPick(
+    [
+      {
+        description: baseDirectory.fsPath,
+        label: "Current project folder",
+        target: "current" as const
+      },
+      {
+        description: `Create a folder under ${baseDirectory.fsPath}`,
+        label: "New folder...",
+        target: "new" as const
+      }
+    ],
+    {
+      placeHolder: "Select where the LaTeX template files should be inserted"
+    }
+  );
+
+  if (!selected) {
+    return undefined;
+  }
+
+  if (selected.target === "current") {
+    return baseDirectory;
+  }
+
+  const folderPath = await vscode.window.showInputBox({
+    ignoreFocusOut: true,
+    placeHolder: "notes or notes/week1",
+    prompt: `New folder path relative to ${baseDirectory.fsPath}`,
+    validateInput: validateTemplateTargetSubdirectory
+  });
+
+  if (!folderPath) {
+    return undefined;
+  }
+
+  return vscode.Uri.joinPath(baseDirectory, ...splitRelativePath(folderPath));
+}
+
+function validateTemplateTargetSubdirectory(value: string): string | undefined {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "Folder path cannot be empty.";
+  }
+
+  if (path.isAbsolute(trimmed) || /^[a-zA-Z]:[\\/]/.test(trimmed)) {
+    return "Use a relative folder path.";
+  }
+
+  const segments = splitRelativePath(trimmed);
+
+  if (segments.length === 0) {
+    return "Folder path cannot be empty.";
+  }
+
+  if (segments.some((segment) => segment === "." || segment === "..")) {
+    return "Folder path cannot contain dot segments.";
+  }
+
+  return undefined;
+}
+
+function splitRelativePath(value: string): string[] {
+  return value.trim().split(/[\\/]+/).filter((segment) => segment.length > 0);
 }
 
 async function updateTemplateStyleFile(context: vscode.ExtensionContext): Promise<void> {
@@ -472,7 +657,7 @@ async function wrapSelectionWithWrapFigure(): Promise<void> {
 
   await editor.edit((editBuilder) => {
     if (configuration.addPackage) {
-      const insertion = getWrapfigPackageInsertion(document);
+      const insertion = getPackageInsertion(document, "wrapfig");
 
       if (insertion) {
         editBuilder.insert(insertion.position, insertion.text);
@@ -480,6 +665,49 @@ async function wrapSelectionWithWrapFigure(): Promise<void> {
     }
 
     editBuilder.replace(selection, wrappedText);
+  });
+}
+
+async function unwrapSelectionFromWrapFigure(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showErrorMessage("LatexToolBox: open a LaTeX file before converting wrapfigure back to figure.");
+    return;
+  }
+
+  const document = editor.document;
+
+  if (!isLatexDocument(document)) {
+    const choice = await vscode.window.showWarningMessage(
+      "LatexToolBox: the active document is not recognized as LaTeX. Convert the selection anyway?",
+      { modal: true },
+      "Convert Anyway"
+    );
+
+    if (choice !== "Convert Anyway") {
+      return;
+    }
+  }
+
+  const selection = editor.selection;
+
+  if (selection.isEmpty) {
+    vscode.window.showErrorMessage("LatexToolBox: select a wrapfigure environment before converting it back to figure.");
+    return;
+  }
+
+  const result = transformSelectionFromWrapFigure(document.getText(selection));
+
+  if (!result.text) {
+    vscode.window.showErrorMessage(`LatexToolBox: ${result.error ?? "could not convert the selected wrapfigure back to figure."}`);
+    return;
+  }
+
+  const transformedText = result.text;
+
+  await editor.edit((editBuilder) => {
+    editBuilder.replace(selection, transformedText);
   });
 }
 
@@ -705,10 +933,11 @@ function normalizeWrapFigurePosition(position: string): string {
   return "r";
 }
 
-function getWrapfigPackageInsertion(document: vscode.TextDocument): { position: vscode.Position; text: string } | undefined {
+function getPackageInsertion(document: vscode.TextDocument, packageName: string): { position: vscode.Position; text: string } | undefined {
   const text = document.getText();
+  const packagePattern = new RegExp(`\\\\usepackage(?:\\[[^\\]]*\\])?\\{[^}]*\\b${escapeRegExp(packageName)}\\b[^}]*\\}`);
 
-  if (/\\usepackage(?:\[[^\]]*\])?\{[^}]*\bwrapfig\b[^}]*\}/.test(text)) {
+  if (packagePattern.test(text)) {
     return undefined;
   }
 
@@ -732,21 +961,25 @@ function getWrapfigPackageInsertion(document: vscode.TextDocument): { position: 
 
     return {
       position: new vscode.Position(lastUsePackagePosition.line + 1, 0),
-      text: "\\usepackage{wrapfig}\n"
+      text: `\\usepackage{${packageName}}\n`
     };
   }
 
   return {
     position: document.positionAt(beginDocumentMatch.index),
-    text: "\\usepackage{wrapfig}\n\n"
+    text: `\\usepackage{${packageName}}\n\n`
   };
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function findExistingTemplateFiles(targetDirectory: vscode.Uri): Promise<string[]> {
   const existingFiles: string[] = [];
 
   for (const fileName of listTemplateFileNames()) {
-    const uri = vscode.Uri.joinPath(targetDirectory, fileName);
+    const uri = vscode.Uri.joinPath(targetDirectory, ...fileName.split("/"));
 
     try {
       await vscode.workspace.fs.stat(uri);

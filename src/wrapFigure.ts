@@ -12,6 +12,7 @@ export interface WrapFigureTransformResult {
 }
 
 const figureEnvironmentPattern = /\\begin\s*\{figure\}\s*(?:\[[^\]]*\])?([\s\S]*?)\\end\s*\{figure\}/g;
+const wrapFigureEnvironmentPattern = /\\begin\s*\{wrapfigure\}\s*\{[^}]*\}\s*\{[^}]*\}([\s\S]*?)\\end\s*\{wrapfigure\}/g;
 const includeGraphicsPattern = /\\includegraphics\b/;
 
 export function transformSelectionToWrapFigure(
@@ -53,6 +54,39 @@ export function transformSelectionToWrapFigure(
 
   return {
     text: wrapFirstIncludeGraphicsBlock(selectedText, configuration)
+  };
+}
+
+export function transformSelectionFromWrapFigure(selectedText: string): WrapFigureTransformResult {
+  if (selectedText.trim().length === 0) {
+    return {
+      error: "select a wrapfigure environment before converting it back to figure."
+    };
+  }
+
+  if (!/\\begin\s*\{wrapfigure\}/.test(selectedText)) {
+    return {
+      error: "the selected text must contain a wrapfigure environment."
+    };
+  }
+
+  let convertedWrapFigureEnvironment = false;
+  const convertedText = selectedText.replace(
+    wrapFigureEnvironmentPattern,
+    (_match, content: string) => {
+      convertedWrapFigureEnvironment = true;
+      return buildFigure(content);
+    }
+  );
+
+  if (!convertedWrapFigureEnvironment) {
+    return {
+      error: "could not parse the selected wrapfigure environment."
+    };
+  }
+
+  return {
+    text: convertedText
   };
 }
 
@@ -124,6 +158,12 @@ function buildWrapFigure(content: string, configuration: WrapFigureConfiguration
   const normalizedContent = normalizeWrapFigureContent(adjustedContent);
 
   return `\\begin{wrapfigure}{${configuration.position}}{${configuration.width}}${normalizedContent}\\end{wrapfigure}`;
+}
+
+function buildFigure(content: string): string {
+  const normalizedContent = normalizeWrapFigureContent(content);
+
+  return `\\begin{figure}[htbp]${normalizedContent}\\end{figure}`;
 }
 
 function normalizeWrapFigureContent(content: string): string {

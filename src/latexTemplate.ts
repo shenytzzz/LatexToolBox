@@ -15,7 +15,10 @@ export interface TemplateBoxSnippet {
 
 const templateFileNames = [
   "main.tex",
-  "notes-style.tex"
+  "notes-style.tex",
+  "chapters/chapter1.tex",
+  "chapters/chapter2.tex",
+  "chapters/chapter3.tex"
 ];
 const templateStyleFileName = "notes-style.tex";
 
@@ -111,14 +114,15 @@ async function copyLatexTemplateNamedFiles(
   const skipped: string[] = [];
 
   for (const fileName of fileNames) {
-    const source = vscode.Uri.joinPath(extensionUri, "latextemplate", fileName);
-    const target = vscode.Uri.joinPath(targetDirectory, fileName);
+    const source = resolveTemplatePath(extensionUri, ["latextemplate", fileName]);
+    const target = resolveTemplatePath(targetDirectory, [fileName]);
 
     if (!overwrite && await exists(target)) {
       skipped.push(fileName);
       continue;
     }
 
+    await ensureDirectory(vscode.Uri.joinPath(target, ".."));
     await vscode.workspace.fs.copy(source, target, { overwrite });
     copied.push(fileName);
   }
@@ -128,6 +132,10 @@ async function copyLatexTemplateNamedFiles(
     skipped,
     targetDirectory: targetDirectory.fsPath
   };
+}
+
+async function ensureDirectory(uri: vscode.Uri): Promise<void> {
+  await vscode.workspace.fs.createDirectory(uri);
 }
 
 export async function resolveProjectDirectory(): Promise<vscode.Uri | undefined> {
@@ -177,6 +185,10 @@ export async function selectTemplateBoxSnippet(): Promise<TemplateBoxSnippet | u
 
 export function listTemplateFileNames(): string[] {
   return [...templateFileNames];
+}
+
+function resolveTemplatePath(baseUri: vscode.Uri, paths: string[]): vscode.Uri {
+  return vscode.Uri.joinPath(baseUri, ...paths.flatMap((templatePath) => templatePath.split("/")));
 }
 
 async function exists(uri: vscode.Uri): Promise<boolean> {

@@ -47,6 +47,16 @@ The selected image is not copied. LatexToolBox inserts a path relative to the de
 
 Supported picker filters include `png`, `jpg`, `jpeg`, `pdf`, `eps`, `svg`, `bmp`, `gif`, `tif`, `tiff`, and `webp`.
 
+### Merge Figures into Subfigures
+
+Select two or more complete `figure` environments, then run `LatexToolBox: Merge Selected Figures into Subfigures`.
+
+The command extracts each selected `\includegraphics`, `\caption`, and `\label`, then replaces the selected figures with one large `figure` containing multiple `subfigure` blocks. It uses the `subfigure` environment from `subcaption`, so documents should include `\usepackage{subcaption}`. The bundled template includes this package.
+
+Subfigure widths are calculated from the selected figure count. LatexToolBox chooses a 2-, 3-, or 4-column layout and avoids a final row containing only one image when possible.
+
+To reverse the operation, select one complete `figure` environment containing multiple `subfigure` blocks, then run `LatexToolBox: Unmerge Subfigures into Figures`.
+
 ### Wrap Selection with Wrapfigure
 
 Select a LaTeX image block or a paragraph containing an image, then run `LatexToolBox: Wrap Selection with Wrapfigure`.
@@ -55,16 +65,21 @@ The command converts a selected `figure` environment into `wrapfigure`. If the s
 
 It can also insert `\usepackage{wrapfig}` into the preamble when the package is missing.
 
+To reverse the operation, select a `wrapfigure` environment and run `LatexToolBox: Unwrap Wrapfigure`. This converts the selected environment back to a normal `figure` environment; it does not remove `\usepackage{wrapfig}` from the preamble.
+
 ### Insert LaTeX Template Files
 
-Run `LatexToolBox: Insert LaTeX Template Files` to copy the bundled notes template into the current VS Code project.
+Run `LatexToolBox: Insert LaTeX Template Files` to copy the bundled notes template into a selected target directory. Each run asks whether to insert into the current project folder or create a new folder under it.
 
 The command copies:
 
 - `latextemplate/main.tex` -> `<project>/main.tex`
 - `latextemplate/notes-style.tex` -> `<project>/notes-style.tex`
+- `latextemplate/chapters/chapter1.tex` -> `<project>/chapters/chapter1.tex`
+- `latextemplate/chapters/chapter2.tex` -> `<project>/chapters/chapter2.tex`
+- `latextemplate/chapters/chapter3.tex` -> `<project>/chapters/chapter3.tex`
 
-If the active file belongs to a workspace folder, that workspace folder is used as the project directory. In a multi-root workspace without an active file match, LatexToolBox asks which folder to use. Existing files are not overwritten unless you explicitly choose `Overwrite`.
+If the active file belongs to a workspace folder, that workspace folder is used as the base project directory. In a multi-root workspace without an active file match, LatexToolBox asks which folder to use before asking for the final template target. Existing files are not overwritten unless you explicitly choose `Overwrite`.
 
 Run `LatexToolBox: Update LaTeX Template Style File` to overwrite only `<project>/notes-style.tex` with the bundled latest version. This is useful when an older project reports errors such as `Environment propositionbox undefined` after new box snippets are added.
 
@@ -247,12 +262,22 @@ Run in VS Code:
 4. Open `test.tex` or another saved `.tex` file.
 5. Run commands from the Command Palette.
 
+Install from a release VSIX:
+
+1. Download the `.vsix` file from the latest GitHub Release.
+2. In VS Code, open the Extensions view.
+3. Choose `Install from VSIX...` from the `...` menu.
+4. Select the downloaded `.vsix` file.
+
+VS Code Extension Marketplace installation is coming soon.
+
 Useful files:
 
 - `src/extension.ts`: command registration and VS Code integration.
 - `src/clipboardImage.ts`: macOS clipboard image extraction.
 - `src/latexTemplate.ts`: bundled template copying and template box snippet commands.
 - `src/mathSymbols.ts`: math-mode detection and typed symbol replacement.
+- `src/subfigures.ts`: conversion between multiple selected figures and one subfigure layout.
 - `src/wrapFigure.ts`: LaTeX wrapfigure transformation logic.
 - `latextemplate/main.tex`: bundled LaTeX notes template.
 - `latextemplate/notes-style.tex`: bundled template style file.

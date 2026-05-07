@@ -10,10 +10,11 @@ This folder contains an English LaTeX template styled after chapter notes with:
 
 ## Files
 
-- `main.tex`: document switches, editable running-header text, and sample content.
+- `main.tex`: document switches, editable running-header text, cover-page text, and chapter inputs.
 - `notes-style.tex`: packages, colors, page layout, chapter headings, table-of-contents styling, and box environments.
+- `chapters/chapter1.tex`, `chapters/chapter2.tex`, `chapters/chapter3.tex`: sample chapter content.
 
-Edit `main.tex` for normal document writing.
+Edit `main.tex` for document-level settings and add or remove `\input{chapters/...}` lines to control chapter order. Edit files under `chapters/` for normal chapter writing.
 
 The feature switches are near the top of the file:
 
@@ -45,6 +46,14 @@ The style file is loaded from `main.tex` with:
 
 ```tex
 \input{notes-style.tex}
+```
+
+Chapter files are loaded from `main.tex` with:
+
+```tex
+\input{chapters/chapter1.tex}
+\input{chapters/chapter2.tex}
+\input{chapters/chapter3.tex}
 ```
 
 ## Compile

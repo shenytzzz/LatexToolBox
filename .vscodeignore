@@ -13,3 +13,6 @@ test.synctex.gz
 figures/**
 latextemplate/*.pdf
 latextemplate/*.synctex.gz
+latextemplate/*.aux
+latextemplate/*.log
+latextemplate/*.out
