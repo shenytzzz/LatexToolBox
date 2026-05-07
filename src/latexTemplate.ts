@@ -17,6 +17,7 @@ const templateFileNames = [
   "main.tex",
   "notes-style.tex"
 ];
+const templateStyleFileName = "notes-style.tex";
 
 const templateBoxSnippets: TemplateBoxSnippet[] = [
   {
@@ -35,6 +36,33 @@ const templateBoxSnippets: TemplateBoxSnippet[] = [
       "\\begin{principlebox}{${1:Title}}",
       "${0:Principle content.}",
       "\\end{principlebox}"
+    ].join("\n"))
+  },
+  {
+    label: "theorembox",
+    description: "Insert a titled theorem box.",
+    snippet: new vscode.SnippetString([
+      "\\begin{theorembox}{${1:Title}}",
+      "${0:Theorem content.}",
+      "\\end{theorembox}"
+    ].join("\n"))
+  },
+  {
+    label: "propositionbox",
+    description: "Insert a titled proposition box.",
+    snippet: new vscode.SnippetString([
+      "\\begin{propositionbox}{${1:Title}}",
+      "${0:Proposition content.}",
+      "\\end{propositionbox}"
+    ].join("\n"))
+  },
+  {
+    label: "proofbox",
+    description: "Insert a proof box.",
+    snippet: new vscode.SnippetString([
+      "\\begin{proofbox}{${1:Proof}}",
+      "${0:Proof content.}",
+      "\\end{proofbox}"
     ].join("\n"))
   },
   {
@@ -62,10 +90,27 @@ export async function copyLatexTemplateFiles(
   targetDirectory: vscode.Uri,
   overwrite: boolean
 ): Promise<TemplateCopyResult> {
+  return copyLatexTemplateNamedFiles(extensionUri, targetDirectory, templateFileNames, overwrite);
+}
+
+export async function copyLatexTemplateStyleFile(
+  extensionUri: vscode.Uri,
+  targetDirectory: vscode.Uri,
+  overwrite: boolean
+): Promise<TemplateCopyResult> {
+  return copyLatexTemplateNamedFiles(extensionUri, targetDirectory, [templateStyleFileName], overwrite);
+}
+
+async function copyLatexTemplateNamedFiles(
+  extensionUri: vscode.Uri,
+  targetDirectory: vscode.Uri,
+  fileNames: string[],
+  overwrite: boolean
+): Promise<TemplateCopyResult> {
   const copied: string[] = [];
   const skipped: string[] = [];
 
-  for (const fileName of templateFileNames) {
+  for (const fileName of fileNames) {
     const source = vscode.Uri.joinPath(extensionUri, "latextemplate", fileName);
     const target = vscode.Uri.joinPath(targetDirectory, fileName);
 

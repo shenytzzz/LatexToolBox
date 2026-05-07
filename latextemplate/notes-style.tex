@@ -19,16 +19,20 @@
 \usepackage{hyperref}
 
 \definecolor{LTBBlue}{HTML}{294A78}
+\definecolor{LTBBlueBack}{HTML}{EFF4FB}
 \definecolor{LTBMutedBlue}{HTML}{8C99B3}
 \definecolor{LTBRule}{HTML}{B8C1D1}
 \definecolor{LTBTeal}{HTML}{2E7F86}
 \definecolor{LTBTealBack}{HTML}{EDF7F7}
+\definecolor{LTBIndigo}{HTML}{5262A3}
+\definecolor{LTBIndigoBack}{HTML}{F1F3FD}
 \definecolor{LTBGreen}{HTML}{3D9A66}
 \definecolor{LTBGreenBack}{HTML}{F2FAF3}
 \definecolor{LTBGold}{HTML}{DFAE57}
 \definecolor{LTBGoldBack}{HTML}{FFF9EC}
 \definecolor{LTBOrange}{HTML}{E8A25C}
 \definecolor{LTBOrangeBack}{HTML}{FFF4E9}
+\definecolor{LTBProofBack}{HTML}{F6F7F9}
 \definecolor{LTBText}{HTML}{30333A}
 
 \hypersetup{
@@ -218,6 +222,62 @@
   #1
 }
 
+\newtcolorbox[auto counter,number within=chapter,number freestyle={\noexpand\arabic{\tcbcounter}}]{theorembox}[2][]{%
+  enhanced,
+  breakable,
+  colback=LTBBlueBack,
+  colframe=LTBBlue!70!black,
+  boxrule=0.75pt,
+  arc=3pt,
+  left=10pt,
+  right=10pt,
+  top=12pt,
+  bottom=9pt,
+  fonttitle=\bfseries\sffamily,
+  coltitle=white,
+  title={Theorem~\thetcbcounter: #2},
+  boxed title style={
+    colback=LTBBlue!92!black,
+    colframe=LTBBlue!92!black,
+    boxrule=0pt,
+    arc=1pt,
+    left=6pt,
+    right=6pt,
+    top=3pt,
+    bottom=3pt
+  },
+  attach boxed title to top left={xshift=10pt,yshift=-2mm},
+  #1
+}
+
+\newtcolorbox[auto counter,number within=chapter,number freestyle={\noexpand\arabic{\tcbcounter}}]{propositionbox}[2][]{%
+  enhanced,
+  breakable,
+  colback=LTBIndigoBack,
+  colframe=LTBIndigo!65!black,
+  boxrule=0.7pt,
+  arc=3pt,
+  left=10pt,
+  right=10pt,
+  top=12pt,
+  bottom=9pt,
+  fonttitle=\bfseries\sffamily,
+  coltitle=white,
+  title={Proposition~\thetcbcounter: #2},
+  boxed title style={
+    colback=LTBIndigo!88!black,
+    colframe=LTBIndigo!88!black,
+    boxrule=0pt,
+    arc=1pt,
+    left=6pt,
+    right=6pt,
+    top=3pt,
+    bottom=3pt
+  },
+  attach boxed title to top left={xshift=10pt,yshift=-2mm},
+  #1
+}
+
 \newtcolorbox{principlebox}[2][]{%
   enhanced,
   breakable,
@@ -243,6 +303,24 @@
     bottom=3pt
   },
   attach boxed title to top right={xshift=-12pt,yshift=-2mm},
+  #1
+}
+
+\newtcolorbox{proofbox}[2][]{%
+  enhanced,
+  breakable,
+  colback=LTBProofBack,
+  colframe=LTBRule,
+  boxrule=0.6pt,
+  arc=3pt,
+  left=10pt,
+  right=10pt,
+  top=8pt,
+  bottom=8pt,
+  fonttitle=\bfseries\sffamily,
+  coltitle=LTBBlue,
+  title={#2},
+  borderline west={2pt}{0pt}{LTBBlue!70},
   #1
 }
 

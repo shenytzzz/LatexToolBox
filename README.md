@@ -14,13 +14,19 @@ When editing a LaTeX file, LatexToolBox overrides the default VS Code formatting
 
 On Windows and Linux, the contributed shortcuts are `Ctrl+B`, `Ctrl+I`, and `Ctrl+U`.
 
-The commands support multiple selections. After wrapping, LatexToolBox keeps the original text selected inside the braces so you can immediately apply another style.
+On macOS, LatexToolBox explicitly removes the conflicting default VS Code bindings inside LaTeX editors:
+
+- `Cmd+B`: `workbench.action.toggleSidebarVisibility`
+- `Cmd+I`: `inlineChat.start`
+- `Cmd+U`: `cursorUndo`
+
+The commands support multiple selections. After wrapping, LatexToolBox keeps the original text selected inside the braces so you can immediately apply another style. Running the same shortcut again on text already inside the matching command removes the outer command, so `\textbf{text}` toggles back to `text`.
 
 ### Insert Clipboard Image
 
 Run `LatexToolBox: Insert Clipboard Image` in a saved `.tex` file on macOS.
 
-The command reads the current clipboard image, saves it beside the active TeX file under `figures/paste/`, and inserts a LaTeX figure snippet at the cursor position.
+The command reads the current clipboard image, saves it under `figures/paste/` beside the detected LaTeX root file, and inserts a LaTeX figure snippet at the cursor position.
 
 Default output:
 
@@ -37,7 +43,7 @@ Default output:
 
 Run `LatexToolBox: Insert Image from File` to choose an image from the file picker and insert a LaTeX snippet that references it.
 
-The selected image is not copied. LatexToolBox inserts a path relative to the active `.tex` file, using POSIX-style `/` separators so the generated LaTeX remains portable.
+The selected image is not copied. LatexToolBox inserts a path relative to the detected LaTeX root file, using POSIX-style `/` separators so the generated LaTeX remains portable.
 
 Supported picker filters include `png`, `jpg`, `jpeg`, `pdf`, `eps`, `svg`, `bmp`, `gif`, `tif`, `tiff`, and `webp`.
 
@@ -60,12 +66,17 @@ The command copies:
 
 If the active file belongs to a workspace folder, that workspace folder is used as the project directory. In a multi-root workspace without an active file match, LatexToolBox asks which folder to use. Existing files are not overwritten unless you explicitly choose `Overwrite`.
 
+Run `LatexToolBox: Update LaTeX Template Style File` to overwrite only `<project>/notes-style.tex` with the bundled latest version. This is useful when an older project reports errors such as `Environment propositionbox undefined` after new box snippets are added.
+
 ### Insert Template Box Snippets
 
 LatexToolBox includes snippets for the box environments defined by the bundled template:
 
 - `definition` / `definitionbox`
 - `principle` / `principlebox`
+- `theorem` / `theorembox`
+- `proposition` / `propositionbox`
+- `proof` / `proofbox`
 - `example` / `examplebox`
 - `note` / `notebox`
 
@@ -94,6 +105,7 @@ Default replacements:
 ~=   ->  \approx
 ===  ->  \equiv
 ...  ->  \ldots
+'    ->  ^{\prime}
 ```
 
 Examples:
@@ -109,6 +121,8 @@ $ A \Rightarrow B $
 ```
 
 The replacement only runs in LaTeX math mode, including `$...$`, `\(...\)`, `\[...\]`, and common math environments such as `equation`, `align`, `gather`, `multline`, `matrix`, and `cases`.
+
+For prime notation, a single `'` becomes `^{\prime}`, but a double `''` stays unchanged.
 
 To add your own symbol, run `LatexToolBox: Register Math Symbol Replacement` and enter the typed trigger plus the LaTeX replacement. You can save it in the current workspace or in user settings.
 
@@ -126,13 +140,15 @@ The file-picker image insertion and wrapfigure transformation are not macOS-spec
 
 - `latexToolBox.clipboardImage.directory`
   - Default: `figures/paste`
-  - Directory, relative to the active `.tex` file, where clipboard images are saved.
+  - Directory, relative to the detected LaTeX project root, where clipboard images are saved.
 - `latexToolBox.clipboardImage.template`
   - Default: a full `figure` environment.
   - Snippet inserted after saving the clipboard image.
 - `latexToolBox.clipboardImage.width`
   - Default: `0.8\linewidth`
   - Value used by `${width}` in the clipboard image template.
+
+When an image command runs from a chapter file such as `chapters/chapter1.tex`, LatexToolBox first honors a `% !TEX root = ../main.tex` directive, then searches upward for `main.tex`. If no project root is found, it falls back to the active `.tex` file's directory.
 
 ### Insert Image from File
 

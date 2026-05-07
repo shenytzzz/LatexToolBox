@@ -23,6 +23,42 @@
     ],
     "description": "Insert a LatexToolBox principlebox environment."
   },
+  "LatexToolBox Theorem Box": {
+    "prefix": [
+      "theorem",
+      "theorembox"
+    ],
+    "body": [
+      "\\begin{theorembox}{${1:Title}}",
+      "${0:Theorem content.}",
+      "\\end{theorembox}"
+    ],
+    "description": "Insert a LatexToolBox theorembox environment."
+  },
+  "LatexToolBox Proposition Box": {
+    "prefix": [
+      "proposition",
+      "propositionbox"
+    ],
+    "body": [
+      "\\begin{propositionbox}{${1:Title}}",
+      "${0:Proposition content.}",
+      "\\end{propositionbox}"
+    ],
+    "description": "Insert a LatexToolBox propositionbox environment."
+  },
+  "LatexToolBox Proof Box": {
+    "prefix": [
+      "proof",
+      "proofbox"
+    ],
+    "body": [
+      "\\begin{proofbox}{${1:Proof}}",
+      "${0:Proof content.}",
+      "\\end{proofbox}"
+    ],
+    "description": "Insert a LatexToolBox proofbox environment."
+  },
   "LatexToolBox Example Box": {
     "prefix": [
       "example",

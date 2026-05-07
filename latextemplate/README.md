@@ -6,7 +6,7 @@ This folder contains an English LaTeX template styled after chapter notes with:
 - optional minimal cover page;
 - optional large chapter or appendix mark at the upper right of chapter-opening pages;
 - optional small running text at the top of normal pages;
-- boxed definitions, examples, principles, and notes.
+- boxed definitions, theorems, propositions, proofs, examples, principles, and notes.
 
 ## Files
 

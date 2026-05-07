@@ -5,6 +5,7 @@ import { readClipboardImageAsPng } from "./clipboardImage";
 import { makeTimestampedPngName, toLatexRelativePath } from "./fileNames";
 import {
   copyLatexTemplateFiles,
+  copyLatexTemplateStyleFile,
   listTemplateFileNames,
   resolveProjectDirectory,
   selectTemplateBoxSnippet
@@ -13,6 +14,7 @@ import {
   findMathSymbolReplacement,
   isInLatexMath,
   normalizeMathSymbolReplacements,
+  type MathSymbolReplacementMatch,
   type MathSymbolReplacements
 } from "./mathSymbols";
 import { renderLatexTemplate } from "./template";
@@ -36,6 +38,15 @@ interface MathSymbolConfiguration {
 }
 
 let applyingMathSymbolReplacement = false;
+let lastMathSymbolReplacement: LastMathSymbolReplacement | undefined;
+
+interface LastMathSymbolReplacement {
+  documentUri: string;
+  line: number;
+  replacement: string;
+  startCharacter: number;
+  trigger: string;
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
@@ -62,6 +73,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "latex-toolbox.insertTemplateFiles",
       () => insertTemplateFiles(context)
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.updateTemplateStyleFile",
+      () => updateTemplateStyleFile(context)
     ),
     vscode.commands.registerCommand(
       "latex-toolbox.insertTemplateBoxSnippet",
@@ -113,13 +128,13 @@ async function insertClipboardImage(): Promise<void> {
   }
 
   const configuration = getClipboardImageConfiguration();
-  const texDirectory = path.dirname(document.uri.fsPath);
-  const imageDirectory = path.resolve(texDirectory, configuration.directory);
+  const latexProjectDirectory = await resolveLatexProjectDirectory(document);
+  const imageDirectory = path.resolve(latexProjectDirectory, configuration.directory);
 
   try {
     const image = await readClipboardImageAsPng();
     const imagePath = await writeClipboardImage(imageDirectory, image);
-    const snippet = buildSnippet(configuration, texDirectory, imagePath);
+    const snippet = buildSnippet(configuration, latexProjectDirectory, imagePath);
 
     await editor.insertSnippet(new vscode.SnippetString(snippet));
   } catch (error) {
@@ -162,10 +177,22 @@ async function formatSelectionWithLatexCommand(commandName: string, formatName: 
 
   await editor.edit((editBuilder) => {
     for (const selection of sortedSelections) {
-      const selectedText = document.getText(selection);
+      const toggle = getLatexCommandToggle(document, selection, commandName);
 
-      editBuilder.replace(selection, `\\${commandName}{${selectedText}}`);
-      nextSelections.set(selectionKey(selection), makeInnerSelection(selection, commandName, selectedText));
+      if (toggle) {
+        editBuilder.replace(toggle.range, toggle.innerText);
+        nextSelections.set(selectionKey(selection), toggle.nextSelection);
+        continue;
+      }
+
+      const selectedText = document.getText(selection);
+      const wrappedText = `\\${commandName}{${selectedText}}`;
+
+      editBuilder.replace(selection, wrappedText);
+      nextSelections.set(
+        selectionKey(selection),
+        makeSelectionFromTextOffsets(selection.start, commandName.length + 2, commandName.length + 2 + selectedText.length, wrappedText)
+      );
     }
   });
 
@@ -201,12 +228,12 @@ async function insertImageFromFile(): Promise<void> {
     }
   }
 
-  const texDirectory = path.dirname(document.uri.fsPath);
+  const latexProjectDirectory = await resolveLatexProjectDirectory(document);
   const selectedImage = await vscode.window.showOpenDialog({
     canSelectFiles: true,
     canSelectFolders: false,
     canSelectMany: false,
-    defaultUri: vscode.Uri.file(texDirectory),
+    defaultUri: vscode.Uri.file(latexProjectDirectory),
     filters: {
       Images: [
         "png",
@@ -240,7 +267,7 @@ async function insertImageFromFile(): Promise<void> {
   }
 
   const configuration = getInsertImageConfiguration();
-  const snippet = buildSnippet(configuration, texDirectory, imageUri.fsPath);
+  const snippet = buildSnippet(configuration, latexProjectDirectory, imageUri.fsPath);
 
   await editor.insertSnippet(new vscode.SnippetString(snippet));
 }
@@ -284,6 +311,37 @@ async function insertTemplateFiles(context: vscode.ExtensionContext): Promise<vo
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`LatexToolBox: failed to insert template files. ${message}`);
+  }
+}
+
+async function updateTemplateStyleFile(context: vscode.ExtensionContext): Promise<void> {
+  const targetDirectory = await resolveProjectDirectory();
+
+  if (!targetDirectory) {
+    vscode.window.showErrorMessage("LatexToolBox: open a project folder or saved file before updating the LaTeX template style.");
+    return;
+  }
+
+  const existingFiles = await findExistingTemplateFiles(targetDirectory);
+
+  if (existingFiles.includes("notes-style.tex")) {
+    const choice = await vscode.window.showWarningMessage(
+      `LatexToolBox: overwrite notes-style.tex in ${targetDirectory.fsPath}? main.tex will not be changed.`,
+      { modal: true },
+      "Overwrite notes-style.tex"
+    );
+
+    if (choice !== "Overwrite notes-style.tex") {
+      return;
+    }
+  }
+
+  try {
+    const result = await copyLatexTemplateStyleFile(context.extensionUri, targetDirectory, true);
+    vscode.window.showInformationMessage(`LatexToolBox: updated ${result.copied.join(", ")} in ${result.targetDirectory}.`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    vscode.window.showErrorMessage(`LatexToolBox: failed to update template style. ${message}`);
   }
 }
 
@@ -469,6 +527,33 @@ async function handleMathSymbolReplacement(event: vscode.TextDocumentChangeEvent
     return;
   }
 
+  const doublePrimePreservation = getDoublePrimePreservation(event.document, linePrefix, insertedTextEnd, match);
+
+  if (doublePrimePreservation) {
+    applyingMathSymbolReplacement = true;
+
+    try {
+      await editor.edit((editBuilder) => {
+        editBuilder.replace(doublePrimePreservation.range, "''");
+      }, {
+        undoStopAfter: false,
+        undoStopBefore: false
+      });
+
+      editor.selection = doublePrimePreservation.nextSelection;
+      lastMathSymbolReplacement = undefined;
+    } finally {
+      applyingMathSymbolReplacement = false;
+    }
+
+    return;
+  }
+
+  if (shouldPreserveRawDoublePrime(linePrefix, match)) {
+    lastMathSymbolReplacement = undefined;
+    return;
+  }
+
   const replacementRange = new vscode.Range(triggerStart, insertedTextEnd);
 
   applyingMathSymbolReplacement = true;
@@ -483,9 +568,66 @@ async function handleMathSymbolReplacement(event: vscode.TextDocumentChangeEvent
 
     const replacementEnd = triggerStart.translate(0, match.replacement.length);
     editor.selection = new vscode.Selection(replacementEnd, replacementEnd);
+    lastMathSymbolReplacement = {
+      documentUri: event.document.uri.toString(),
+      line: triggerStart.line,
+      replacement: match.replacement,
+      startCharacter: triggerStart.character,
+      trigger: match.trigger
+    };
   } finally {
     applyingMathSymbolReplacement = false;
   }
+}
+
+function getDoublePrimePreservation(
+  document: vscode.TextDocument,
+  linePrefix: string,
+  insertedTextEnd: vscode.Position,
+  match: MathSymbolReplacementMatch
+): { nextSelection: vscode.Selection; range: vscode.Range } | undefined {
+  if (match.trigger !== "'" || !linePrefix.endsWith(`${match.replacement}'`)) {
+    return undefined;
+  }
+
+  const replacementStartCharacter = match.startCharacter - match.replacement.length;
+
+  if (replacementStartCharacter < 0) {
+    return undefined;
+  }
+
+  if (
+    !lastMathSymbolReplacement
+    || lastMathSymbolReplacement.documentUri !== document.uri.toString()
+    || lastMathSymbolReplacement.line !== insertedTextEnd.line
+    || lastMathSymbolReplacement.startCharacter !== replacementStartCharacter
+    || lastMathSymbolReplacement.trigger !== match.trigger
+    || lastMathSymbolReplacement.replacement !== match.replacement
+  ) {
+    return undefined;
+  }
+
+  const rangeStart = new vscode.Position(insertedTextEnd.line, replacementStartCharacter);
+  const range = new vscode.Range(rangeStart, insertedTextEnd);
+  const currentText = document.getText(range);
+
+  if (currentText !== `${match.replacement}'`) {
+    return undefined;
+  }
+
+  const selectionEnd = rangeStart.translate(0, 2);
+
+  return {
+    nextSelection: new vscode.Selection(selectionEnd, selectionEnd),
+    range
+  };
+}
+
+function shouldPreserveRawDoublePrime(
+  linePrefix: string,
+  match: MathSymbolReplacementMatch
+): boolean {
+  return match.trigger === "'" && linePrefix.endsWith("''");
 }
 
 function isLatexDocument(document: vscode.TextDocument): boolean {
@@ -548,7 +690,8 @@ function defaultMathSymbolReplacements(): MathSymbolReplacements {
     "-+": "\\mp",
     "~=": "\\approx",
     "===": "\\equiv",
-    "...": "\\ldots"
+    "...": "\\ldots",
+    "'": "^{\\prime}"
   };
 }
 
@@ -628,6 +771,94 @@ function normalizeRelativeDirectory(directory: string): string {
   return trimmed;
 }
 
+async function resolveLatexProjectDirectory(document: vscode.TextDocument): Promise<string> {
+  const documentDirectory = path.dirname(document.uri.fsPath);
+  const texRootPath = resolveTexRootDirective(document, documentDirectory);
+
+  if (texRootPath) {
+    return path.dirname(texRootPath);
+  }
+
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+  const workspaceDirectory = workspaceFolder?.uri.scheme === "file"
+    ? workspaceFolder.uri.fsPath
+    : undefined;
+  const mainTexDirectory = await findNearestMainTexDirectory(documentDirectory, workspaceDirectory);
+
+  return mainTexDirectory ?? documentDirectory;
+}
+
+function resolveTexRootDirective(document: vscode.TextDocument, documentDirectory: string): string | undefined {
+  const lines = document.getText().split(/\r?\n/, 50);
+
+  for (const line of lines) {
+    const match = /^\s*%\s*!\s*TEX\s+root\s*=\s*(.+?)\s*$/i.exec(line);
+
+    if (!match) {
+      continue;
+    }
+
+    const rootValue = stripTexRootQuotes(match[1].trim());
+
+    if (!rootValue) {
+      continue;
+    }
+
+    return path.isAbsolute(rootValue)
+      ? path.normalize(rootValue)
+      : path.resolve(documentDirectory, rootValue);
+  }
+
+  return undefined;
+}
+
+function stripTexRootQuotes(value: string): string {
+  if (
+    (value.startsWith("\"") && value.endsWith("\""))
+    || (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1).trim();
+  }
+
+  return value;
+}
+
+async function findNearestMainTexDirectory(startDirectory: string, stopDirectory: string | undefined): Promise<string | undefined> {
+  const stop = stopDirectory ? path.resolve(stopDirectory) : undefined;
+  let current = path.resolve(startDirectory);
+
+  while (true) {
+    if (await isFile(path.join(current, "main.tex"))) {
+      return current;
+    }
+
+    if (current === stop) {
+      return undefined;
+    }
+
+    const parent = path.dirname(current);
+
+    if (parent === current) {
+      return undefined;
+    }
+
+    current = parent;
+  }
+}
+
+async function isFile(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile();
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 function defaultTemplate(): string {
   return [
     "\\begin{figure}[htbp]",
@@ -694,16 +925,127 @@ function selectionKey(selection: vscode.Selection): string {
   ].join(":");
 }
 
-function makeInnerSelection(
+function getLatexCommandToggle(
+  document: vscode.TextDocument,
   selection: vscode.Selection,
-  commandName: string,
-  selectedText: string
+  commandName: string
+): { innerText: string; nextSelection: vscode.Selection; range: vscode.Range } | undefined {
+  return getWholeCommandSelectionToggle(document, selection, commandName)
+    ?? getContainingCommandSelectionToggle(document, selection, commandName);
+}
+
+function getWholeCommandSelectionToggle(
+  document: vscode.TextDocument,
+  selection: vscode.Selection,
+  commandName: string
+): { innerText: string; nextSelection: vscode.Selection; range: vscode.Range } | undefined {
+  const selectedText = document.getText(selection);
+  const openWrapper = `\\${commandName}{`;
+
+  if (!selectedText.startsWith(openWrapper) || !selectedText.endsWith("}")) {
+    return undefined;
+  }
+
+  const closeOffset = findMatchingClosingBrace(selectedText, openWrapper.length - 1);
+
+  if (closeOffset !== selectedText.length - 1) {
+    return undefined;
+  }
+
+  const innerText = selectedText.slice(openWrapper.length, -1);
+
+  return {
+    innerText,
+    nextSelection: makeSelectionFromTextOffsets(selection.start, 0, innerText.length, innerText),
+    range: selection
+  };
+}
+
+function getContainingCommandSelectionToggle(
+  document: vscode.TextDocument,
+  selection: vscode.Selection,
+  commandName: string
+): { innerText: string; nextSelection: vscode.Selection; range: vscode.Range } | undefined {
+  const documentText = document.getText();
+  const openWrapper = `\\${commandName}{`;
+  const selectionStartOffset = document.offsetAt(selection.start);
+  const selectionEndOffset = document.offsetAt(selection.end);
+  let openOffset = documentText.lastIndexOf(openWrapper, selectionStartOffset);
+
+  while (openOffset >= 0) {
+    const contentStartOffset = openOffset + openWrapper.length;
+    const closeOffset = findMatchingClosingBrace(documentText, contentStartOffset - 1);
+
+    if (
+      closeOffset >= 0
+      && selectionStartOffset >= contentStartOffset
+      && selectionEndOffset <= closeOffset
+    ) {
+      const innerText = documentText.slice(contentStartOffset, closeOffset);
+      const rangeStart = document.positionAt(openOffset);
+      const range = new vscode.Range(rangeStart, document.positionAt(closeOffset + 1));
+      const nextSelectionStartOffset = selectionStartOffset - contentStartOffset;
+      const nextSelectionEndOffset = selectionEndOffset - contentStartOffset;
+
+      return {
+        innerText,
+        nextSelection: makeSelectionFromTextOffsets(
+          rangeStart,
+          nextSelectionStartOffset,
+          nextSelectionEndOffset,
+          innerText
+        ),
+        range
+      };
+    }
+
+    openOffset = documentText.lastIndexOf(openWrapper, openOffset - 1);
+  }
+
+  return undefined;
+}
+
+function findMatchingClosingBrace(text: string, openBraceOffset: number): number {
+  let depth = 0;
+
+  for (let index = openBraceOffset; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (char === "{" && !isEscapedAt(text, index)) {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}" && !isEscapedAt(text, index)) {
+      depth -= 1;
+
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function isEscapedAt(text: string, index: number): boolean {
+  let backslashCount = 0;
+
+  for (let cursor = index - 1; cursor >= 0 && text[cursor] === "\\"; cursor -= 1) {
+    backslashCount += 1;
+  }
+
+  return backslashCount % 2 === 1;
+}
+
+function makeSelectionFromTextOffsets(
+  startPosition: vscode.Position,
+  startOffset: number,
+  endOffset: number,
+  text: string
 ): vscode.Selection {
-  const openWrapperLength = commandName.length + 2;
-  const selectionStartOffset = openWrapperLength;
-  const selectionEndOffset = openWrapperLength + selectedText.length;
-  const start = translateByTextOffset(selection.start, `\\${commandName}{`.slice(0, selectionStartOffset));
-  const end = translateByTextOffset(selection.start, `\\${commandName}{${selectedText}`.slice(0, selectionEndOffset));
+  const start = translateByTextOffset(startPosition, text.slice(0, startOffset));
+  const end = translateByTextOffset(startPosition, text.slice(0, endOffset));
 
   return new vscode.Selection(start, end);
 }

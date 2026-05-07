@@ -2,7 +2,7 @@
   "name": "latextoolbox",
   "displayName": "LatexToolBox",
   "description": "Convenient tools for writing LaTeX in VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "shenyt",
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
     "onCommand:latex-toolbox.italicSelection",
     "onCommand:latex-toolbox.registerMathSymbolReplacement",
     "onCommand:latex-toolbox.underlineSelection",
+    "onCommand:latex-toolbox.updateTemplateStyleFile",
     "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
     "onLanguage:latex"
   ],
@@ -54,6 +55,10 @@
         "title": "LatexToolBox: Insert Template Box Snippet"
       },
       {
+        "command": "latex-toolbox.updateTemplateStyleFile",
+        "title": "LatexToolBox: Update LaTeX Template Style File"
+      },
+      {
         "command": "latex-toolbox.registerMathSymbolReplacement",
         "title": "LatexToolBox: Register Math Symbol Replacement"
       },
@@ -68,15 +73,33 @@
     ],
     "keybindings": [
       {
+        "command": "-workbench.action.toggleSidebarVisibility",
+        "key": "ctrl+b",
+        "mac": "cmd+b",
+        "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
+      },
+      {
         "command": "latex-toolbox.boldSelection",
         "key": "ctrl+b",
         "mac": "cmd+b",
         "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
       },
       {
+        "command": "-inlineChat.start",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
+      },
+      {
         "command": "latex-toolbox.italicSelection",
         "key": "ctrl+i",
         "mac": "cmd+i",
+        "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
+      },
+      {
+        "command": "-cursorUndo",
+        "key": "ctrl+u",
+        "mac": "cmd+u",
         "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
       },
       {
@@ -125,6 +148,11 @@
           "group": "navigation"
         },
         {
+          "command": "latex-toolbox.updateTemplateStyleFile",
+          "when": "editorLangId == latex",
+          "group": "navigation"
+        },
+        {
           "command": "latex-toolbox.registerMathSymbolReplacement",
           "when": "editorLangId == latex",
           "group": "navigation"
@@ -142,7 +170,7 @@
         "latexToolBox.clipboardImage.directory": {
           "type": "string",
           "default": "figures/paste",
-          "description": "Directory, relative to the active .tex file, where clipboard images are saved."
+          "description": "Directory, relative to the detected LaTeX project root, where clipboard images are saved."
         },
         "latexToolBox.clipboardImage.template": {
           "type": "string",
@@ -219,7 +247,8 @@
             "-+": "\\mp",
             "~=": "\\approx",
             "===": "\\equiv",
-            "...": "\\ldots"
+            "...": "\\ldots",
+            "'": "^{\\prime}"
           },
           "additionalProperties": {
             "type": "string"
