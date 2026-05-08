@@ -23,7 +23,10 @@ The feature switches are near the top of the file:
 \ShowTableOfContents      % Comment this line to skip the table of contents.
 \ShowChapterNumberMark    % Comment this line to hide the large top-right chapter number.
 \ShowTopRunningText       % Comment this line to hide the small text at the top of normal pages.
+\UseDraftImages           % Uncomment this line to show draft boxes instead of rendering images.
 ```
+
+`\UseDraftImages` enables `graphicx` draft mode. Images are replaced by same-layout draft boxes during compilation, which can speed up large documents while preserving image dimensions from options such as `width`, `height`, and `scale`. Leave the line commented for normal image rendering.
 
 The running-header text is explicitly marked in `main.tex`:
 

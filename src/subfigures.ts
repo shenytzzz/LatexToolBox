@@ -234,7 +234,7 @@ function buildSubfigureEnvironment(figures: ParsedFigure[]): string {
 
   figures.forEach((figure, index) => {
     lines.push(
-      `  \\begin{subfigure}[b]{${subfigureWidth}}`,
+      `  \\begin{subfigure}[t]{${subfigureWidth}}`,
       "    \\centering",
       `    \\includegraphics[${updateGraphicsOptions(figure.includeOptions, "\\linewidth")}]{${figure.imagePath}}`,
       `    \\caption{${figure.caption}}`

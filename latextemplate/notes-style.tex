@@ -11,6 +11,12 @@
 \usepackage{microtype}
 \usepackage{amsmath,amssymb,mathtools}
 \usepackage{graphicx}
+\makeatletter
+\@ifundefined{ifLTBUseDraftImages}{\newif\ifLTBUseDraftImages}{}
+\makeatother
+\ifLTBUseDraftImages
+  \setkeys{Gin}{draft}
+\fi
 \usepackage{subcaption}
 \usepackage{enumitem}
 \usepackage{xcolor}
@@ -19,6 +25,8 @@
 \usepackage{tocloft}
 \usepackage[most]{tcolorbox}
 \usepackage{hyperref}
+\usepackage{wrapfig}
+\usepackage[section]{placeins}
 
 \definecolor{LTBBlue}{HTML}{294A78}
 \definecolor{LTBBlueBack}{HTML}{EFF4FB}
