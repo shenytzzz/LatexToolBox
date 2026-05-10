@@ -81,7 +81,7 @@ The command copies:
 
 If the active file belongs to a workspace folder, that workspace folder is used as the base project directory. In a multi-root workspace without an active file match, LatexToolBox asks which folder to use before asking for the final template target. Existing files are not overwritten unless you explicitly choose `Overwrite`.
 
-The bundled `main.tex` includes a commented `% \UseDraftImages` switch. Uncomment it to enable `graphicx` draft mode, which replaces `\includegraphics` output with same-layout draft boxes instead of rendering the image files. Keep it commented for normal image rendering.
+The bundled `main.tex` includes a commented `% \UseDraftImages` switch. Uncomment it to enable `graphicx` draft mode globally, which replaces `\includegraphics` output with same-layout draft boxes instead of rendering the image files. Keep it commented for normal image rendering. When the global switch is commented, use `{\UseDraftImages ... }` around a local section to enable draft image boxes only inside that TeX group.
 
 Run `LatexToolBox: Update LaTeX Template Style File` to overwrite only `<project>/notes-style.tex` with the bundled latest version. This is useful when an older project reports errors such as `Environment propositionbox undefined` after new box snippets are added.
 

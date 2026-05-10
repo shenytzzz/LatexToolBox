@@ -14,8 +14,13 @@
 \makeatletter
 \@ifundefined{ifLTBUseDraftImages}{\newif\ifLTBUseDraftImages}{}
 \makeatother
+\providecommand{\LTBEnableDraftImages}{\setkeys{Gin}{draft}}
+\providecommand{\UseDraftImages}{%
+  \LTBUseDraftImagestrue
+  \LTBEnableDraftImages
+}
 \ifLTBUseDraftImages
-  \setkeys{Gin}{draft}
+  \LTBEnableDraftImages
 \fi
 \usepackage{subcaption}
 \usepackage{enumitem}

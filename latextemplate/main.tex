@@ -15,7 +15,12 @@
 \newcommand{\ShowChapterNumberMark}{\LTBShowChapterNumberMarktrue}
 \newcommand{\ShowTopRunningText}{\LTBShowTopTexttrue}
 \newcommand{\ShowCoverPage}{\LTBShowCovertrue}
-\newcommand{\UseDraftImages}{\LTBUseDraftImagestrue}
+\newcommand{\UseDraftImages}{%
+  \LTBUseDraftImagestrue
+  \ifdefined\LTBEnableDraftImages
+    \LTBEnableDraftImages
+  \fi
+}
 
 \ShowCoverPage           % Comment this line to skip the cover page.
 % \ShowTableOfContents      % Comment this line to skip the table of contents.

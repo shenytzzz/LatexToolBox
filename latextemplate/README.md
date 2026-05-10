@@ -26,7 +26,7 @@ The feature switches are near the top of the file:
 \UseDraftImages           % Uncomment this line to show draft boxes instead of rendering images.
 ```
 
-`\UseDraftImages` enables `graphicx` draft mode. Images are replaced by same-layout draft boxes during compilation, which can speed up large documents while preserving image dimensions from options such as `width`, `height`, and `scale`. Leave the line commented for normal image rendering.
+`\UseDraftImages` enables `graphicx` draft mode. Images are replaced by same-layout draft boxes during compilation, which can speed up large documents while preserving image dimensions from options such as `width`, `height`, and `scale`. Uncomment the switch near the top of `main.tex` to enable draft images globally. Leave it commented for normal rendering, then use `{\UseDraftImages ... }` around a local section to enable draft image boxes only inside that TeX group.
 
 The running-header text is explicitly marked in `main.tex`:
 

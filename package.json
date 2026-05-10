@@ -2,7 +2,7 @@
   "name": "latextoolbox",
   "displayName": "LatexToolBox",
   "description": "Convenient tools for writing LaTeX in VS Code.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "shenyt",
   "repository": {
     "type": "git",
