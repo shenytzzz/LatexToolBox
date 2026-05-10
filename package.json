@@ -2,7 +2,7 @@
   "name": "latextoolbox",
   "displayName": "LatexToolBox",
   "description": "Convenient tools for writing LaTeX in VS Code.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "shenyt",
   "repository": {
     "type": "git",
@@ -15,6 +15,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onCommand:latex-toolbox.boldSelection",
     "onCommand:latex-toolbox.insertClipboardImage",
     "onCommand:latex-toolbox.insertImageFromFile",
@@ -27,8 +28,10 @@
     "onCommand:latex-toolbox.unmergeSelectionFromSubfigures",
     "onCommand:latex-toolbox.unwrapSelectionFromWrapFigure",
     "onCommand:latex-toolbox.updateTemplateStyleFile",
+    "onCommand:latex-toolbox.wrapSelectionWithInlineMath",
     "onCommand:latex-toolbox.wrapSelectionWithWrapFigure",
-    "onLanguage:latex"
+    "onLanguage:latex",
+    "onLanguage:tex"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -82,6 +85,10 @@
         "title": "LatexToolBox: Underline Selection"
       },
       {
+        "command": "latex-toolbox.wrapSelectionWithInlineMath",
+        "title": "LatexToolBox: Wrap Selection with Inline Math"
+      },
+      {
         "command": "latex-toolbox.wrapSelectionWithWrapFigure",
         "title": "LatexToolBox: Wrap Selection with Wrapfigure"
       }
@@ -122,6 +129,11 @@
         "key": "ctrl+u",
         "mac": "cmd+u",
         "when": "editorTextFocus && editorLangId == latex && !editorReadonly"
+      },
+      {
+        "command": "latex-toolbox.wrapSelectionWithInlineMath",
+        "key": "shift+4",
+        "when": "editorTextFocus && editorHasSelection && !editorReadonly && (editorLangId == latex || editorLangId == tex || resourceExtname == .tex)"
       }
     ],
     "snippets": [

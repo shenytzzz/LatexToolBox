@@ -44,7 +44,10 @@ interface MathSymbolConfiguration {
 }
 
 let applyingMathSymbolReplacement = false;
+let applyingInlineMathSelectionWrap = false;
 let lastMathSymbolReplacement: LastMathSymbolReplacement | undefined;
+let lastLatexSelections: LastLatexSelectionSnapshot | undefined;
+const previousDocumentTexts = new Map<string, string>();
 
 interface LastMathSymbolReplacement {
   documentUri: string;
@@ -54,7 +57,17 @@ interface LastMathSymbolReplacement {
   trigger: string;
 }
 
+interface LastLatexSelectionSnapshot {
+  documentUri: string;
+  selections: Array<{
+    range: vscode.Range;
+    text: string;
+  }>;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
+  vscode.workspace.textDocuments.forEach(rememberDocumentText);
+
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "latex-toolbox.boldSelection",
@@ -67,6 +80,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "latex-toolbox.underlineSelection",
       () => formatSelectionWithLatexCommand("underline", "underline")
+    ),
+    vscode.commands.registerCommand(
+      "latex-toolbox.wrapSelectionWithInlineMath",
+      wrapSelectionWithInlineMath
     ),
     vscode.commands.registerCommand(
       "latex-toolbox.insertClipboardImage",
@@ -108,8 +125,15 @@ export function activate(context: vscode.ExtensionContext): void {
       "latex-toolbox.unwrapSelectionFromWrapFigure",
       unwrapSelectionFromWrapFigure
     ),
+    vscode.workspace.onDidOpenTextDocument(rememberDocumentText),
+    vscode.workspace.onDidCloseTextDocument((document) => {
+      previousDocumentTexts.delete(document.uri.toString());
+    }),
+    vscode.window.onDidChangeTextEditorSelection((event) => {
+      rememberLatexSelections(event.textEditor);
+    }),
     vscode.workspace.onDidChangeTextDocument((event) => {
-      void handleMathSymbolReplacement(event);
+      void handleTextDocumentChange(event);
     })
   );
 }
@@ -217,6 +241,64 @@ async function formatSelectionWithLatexCommand(commandName: string, formatName: 
   editor.selections = selections
     .map((selection) => nextSelections.get(selectionKey(selection)))
     .filter((selection): selection is vscode.Selection => selection !== undefined);
+}
+
+async function wrapSelectionWithInlineMath(): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showErrorMessage("LatexToolBox: open a LaTeX file before wrapping a selection with inline math.");
+    return;
+  }
+
+  const document = editor.document;
+
+  if (!isLatexDocument(document)) {
+    const choice = await vscode.window.showWarningMessage(
+      "LatexToolBox: the active document is not recognized as LaTeX. Wrap the selection with inline math anyway?",
+      { modal: true },
+      "Wrap Anyway"
+    );
+
+    if (choice !== "Wrap Anyway") {
+      return;
+    }
+  }
+
+  if (!await wrapEditorSelectionsWithInlineMath(editor)) {
+    vscode.window.showErrorMessage("LatexToolBox: select text before wrapping it with inline math.");
+  }
+}
+
+async function wrapEditorSelectionsWithInlineMath(editor: vscode.TextEditor): Promise<boolean> {
+  const document = editor.document;
+  const selections = editor.selections.filter((selection) => !selection.isEmpty);
+
+  if (selections.length === 0) {
+    return false;
+  }
+
+  const sortedSelections = [...selections].sort((left, right) => document.offsetAt(right.start) - document.offsetAt(left.start));
+  const nextSelections = new Map<string, vscode.Selection>();
+
+  await editor.edit((editBuilder) => {
+    for (const selection of sortedSelections) {
+      const selectedText = document.getText(selection);
+      const wrappedText = `$${selectedText}$`;
+
+      editBuilder.replace(selection, wrappedText);
+      nextSelections.set(
+        selectionKey(selection),
+        makeSelectionFromTextOffsets(selection.start, 1, 1 + selectedText.length, wrappedText)
+      );
+    }
+  });
+
+  editor.selections = selections
+    .map((selection) => nextSelections.get(selectionKey(selection)))
+    .filter((selection): selection is vscode.Selection => selection !== undefined);
+
+  return true;
 }
 
 async function insertImageFromFile(): Promise<void> {
@@ -709,6 +791,168 @@ async function unwrapSelectionFromWrapFigure(): Promise<void> {
   await editor.edit((editBuilder) => {
     editBuilder.replace(selection, transformedText);
   });
+}
+
+function rememberLatexSelections(editor: vscode.TextEditor): void {
+  if (!isLatexDocument(editor.document)) {
+    lastLatexSelections = undefined;
+    return;
+  }
+
+  const selections = editor.selections
+    .filter((selection) => !selection.isEmpty)
+    .map((selection) => ({
+      range: new vscode.Range(selection.start, selection.end),
+      text: editor.document.getText(selection)
+    }));
+
+  lastLatexSelections = selections.length > 0
+    ? {
+      documentUri: editor.document.uri.toString(),
+      selections
+    }
+    : undefined;
+}
+
+async function handleTextDocumentChange(event: vscode.TextDocumentChangeEvent): Promise<void> {
+  try {
+    if (applyingInlineMathSelectionWrap) {
+      return;
+    }
+
+    if (await handleInlineMathSelectionWrap(event)) {
+      return;
+    }
+
+    await handleMathSymbolReplacement(event);
+  } finally {
+    rememberDocumentText(event.document);
+  }
+}
+
+async function handleInlineMathSelectionWrap(event: vscode.TextDocumentChangeEvent): Promise<boolean> {
+  if (!isLatexDocument(event.document) || event.contentChanges.length !== 1) {
+    return false;
+  }
+
+  if (
+    event.reason === vscode.TextDocumentChangeReason.Undo
+    || event.reason === vscode.TextDocumentChangeReason.Redo
+  ) {
+    return false;
+  }
+
+  const change = event.contentChanges[0];
+
+  if ((change.text !== "$" && change.text !== "$$") || change.range.isEmpty) {
+    return false;
+  }
+
+  const snapshot = lastLatexSelections?.documentUri === event.document.uri.toString()
+    ? lastLatexSelections
+    : undefined;
+  const matchedSelection = snapshot?.selections.find((selection) => selection.range.isEqual(change.range));
+  const selectedText = matchedSelection?.text ?? getPreviousDocumentText(event.document, change.range);
+
+  if (!selectedText) {
+    return false;
+  }
+
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor || editor.document.uri.toString() !== event.document.uri.toString()) {
+    return false;
+  }
+
+  const wrappedText = `$${selectedText}$`;
+
+  applyingInlineMathSelectionWrap = true;
+  lastLatexSelections = undefined;
+
+  try {
+    await vscode.commands.executeCommand("undo");
+
+    await editor.edit((editBuilder) => {
+      editBuilder.replace(change.range, wrappedText);
+    });
+
+    editor.selection = makeSelectionFromTextOffsets(change.range.start, 1, 1 + selectedText.length, wrappedText);
+  } finally {
+    applyingInlineMathSelectionWrap = false;
+  }
+
+  return true;
+}
+
+function rememberDocumentText(document: vscode.TextDocument): void {
+  if (isLatexDocument(document)) {
+    previousDocumentTexts.set(document.uri.toString(), document.getText());
+  } else {
+    previousDocumentTexts.delete(document.uri.toString());
+  }
+}
+
+function getPreviousDocumentText(document: vscode.TextDocument, range: vscode.Range): string | undefined {
+  const previousText = previousDocumentTexts.get(document.uri.toString());
+
+  if (previousText === undefined) {
+    return undefined;
+  }
+
+  const startOffset = offsetAtTextPosition(previousText, range.start);
+  const endOffset = offsetAtTextPosition(previousText, range.end);
+
+  if (startOffset === undefined || endOffset === undefined || endOffset <= startOffset) {
+    return undefined;
+  }
+
+  return previousText.slice(startOffset, endOffset);
+}
+
+function offsetAtTextPosition(text: string, position: vscode.Position): number | undefined {
+  let offset = 0;
+
+  for (let line = 0; line < position.line; line += 1) {
+    const nextLineOffset = findNextLineOffset(text, offset);
+
+    if (nextLineOffset === undefined) {
+      return undefined;
+    }
+
+    offset = nextLineOffset;
+  }
+
+  const lineEndOffset = findLineEndOffset(text, offset);
+
+  if (offset + position.character > lineEndOffset) {
+    return undefined;
+  }
+
+  return offset + position.character;
+}
+
+function findNextLineOffset(text: string, offset: number): number | undefined {
+  for (let index = offset; index < text.length; index += 1) {
+    if (text[index] === "\n") {
+      return index + 1;
+    }
+
+    if (text[index] === "\r") {
+      return text[index + 1] === "\n" ? index + 2 : index + 1;
+    }
+  }
+
+  return undefined;
+}
+
+function findLineEndOffset(text: string, offset: number): number {
+  for (let index = offset; index < text.length; index += 1) {
+    if (text[index] === "\n" || text[index] === "\r") {
+      return index;
+    }
+  }
+
+  return text.length;
 }
 
 async function handleMathSymbolReplacement(event: vscode.TextDocumentChangeEvent): Promise<void> {

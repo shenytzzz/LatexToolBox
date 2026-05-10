@@ -11,6 +11,7 @@ When editing a LaTeX file, LatexToolBox overrides the default VS Code formatting
 - `Cmd+B` wraps the selected text with `\textbf{...}`
 - `Cmd+I` wraps the selected text with `\textit{...}`
 - `Cmd+U` wraps the selected text with `\underline{...}`
+- `$` wraps the selected text with inline math delimiters, so `n` becomes `$n$`
 
 On Windows and Linux, the contributed shortcuts are `Ctrl+B`, `Ctrl+I`, and `Ctrl+U`.
 
@@ -20,7 +21,9 @@ On macOS, LatexToolBox explicitly removes the conflicting default VS Code bindin
 - `Cmd+I`: `inlineChat.start`
 - `Cmd+U`: `cursorUndo`
 
-The commands support multiple selections. After wrapping, LatexToolBox keeps the original text selected inside the braces so you can immediately apply another style. Running the same shortcut again on text already inside the matching command removes the outer command, so `\textbf{text}` toggles back to `text`.
+The text formatting commands support multiple selections. After wrapping, LatexToolBox keeps the original text selected inside the braces so you can immediately apply another style. Running the same shortcut again on text already inside the matching command removes the outer command, so `\textbf{text}` toggles back to `text`.
+
+The inline math shortcut also keeps the selected text active inside the dollar delimiters. If another LaTeX extension first expands the typed `$` into paired delimiters, LatexToolBox normalizes the result back to `$selected text$`, and one `Cmd+Z` / `Ctrl+Z` restores the original unwrapped selection.
 
 ### Insert Clipboard Image
 
@@ -285,6 +288,13 @@ Useful files:
 - `latextemplate/notes-style.tex`: bundled template style file.
 - `snippets/latex.json`: LaTeX snippet contributions.
 - `test.tex`: small document for manual testing.
+
+## Release Notes
+
+### 0.0.5
+
+- Added inline math wrapping for selected LaTeX text with `$`.
+- Fixed undo behavior after inline math wrapping so `Cmd+Z` / `Ctrl+Z` restores the original selection instead of inserting extra dollar delimiters.
 
 ## Current Limitations
 
